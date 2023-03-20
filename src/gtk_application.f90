@@ -16,13 +16,18 @@ module gtk_application
     public gtk_deinit_app
 
     ! Module variables
-    integer, parameter :: width_w = 1200, height_w = 800, width_c = 600, height_c = 600
+    integer, parameter :: width_w = 1200, height_w = 800, width_c = 650, height_c = 650
     type(c_ptr) :: gtk_app = c_null_ptr
     type(c_ptr) :: window = c_null_ptr
     type(c_ptr) :: menu_bar = c_null_ptr
     type(c_ptr) :: canvas = c_null_ptr
     integer(c_int) :: status = 0
     character(len=16), dimension(1) :: filters = ["*.cif"], filter_names = ["CIF files"]
+    logical :: has_file = .false.
+
+    ! Current crystal
+    character(:), allocatable :: crystal_name
+    type(atom), allocatable :: atom_list(:)
 
 contains
     ! Initializes the application
@@ -37,6 +42,9 @@ contains
 
     ! Deinitializes the application
     subroutine gtk_deinit_app()
+        if (allocated(crystal_name)) deallocate(crystal_name)
+        if (allocated(atom_list)) deallocate(atom_list)
+
         call g_application_quit(gtk_app)
     end subroutine
 
@@ -99,10 +107,32 @@ contains
         type(c_ptr), value, intent(in) :: widget, cairo_ctx, gdata
         integer(c_int), value, intent(in) :: width, height
 
+        ! Clear screen
+        !call cairo_set_operator(cairo_ctx, CAIRO_OPERATOR_SOURCE)
+        !call cairo_set_source_rgb(cairo_ctx, 0d0, 0d0, 0d0)
+        !call cairo_paint(cairo_ctx)
+
         ! Fill the background with a soft beige
-        call cairo_set_source_rgb(cairo_ctx, 245d0/255d0, 245d0/255d0, 220d0/255d0)
+        call cairo_set_source_rgb(cairo_ctx, 245d0/255d0, 245d0/255d0, 245d0/255d0)
         call cairo_rectangle(cairo_ctx, 0d0, 0d0, real(width, 8), real(height, 8))
         call cairo_fill(cairo_ctx)
+
+        ! Fill the background of the header with gray
+        call cairo_set_source_rgb(cairo_ctx, 0.5d0, 0.5d0, 0.5d0)
+        call cairo_rectangle(cairo_ctx, 0d0, 0d0, real(width, 8), 50d0)
+        call cairo_fill(cairo_ctx)
+
+        ! Display title (atom name if applicable)
+        call cairo_set_source_rgb(cairo_ctx, 0.1d0, 0.1d0, 0.1d0)
+        call cairo_set_font_size(cairo_ctx, 30d0)
+        call cairo_move_to(cairo_ctx, 0d0, 35d0)
+        if (has_file .eqv. .false.) then
+            call cairo_show_text(cairo_ctx, "No CIF-file selected"//c_null_char)
+            return
+        endif
+
+        ! Display current atom data
+        call cairo_show_text(cairo_ctx, crystal_name//c_null_char)
     end subroutine
 
     ! Called when the 'quit' button is pressed, exits the application
@@ -117,11 +147,11 @@ contains
         integer(c_int) :: ret_val
         character(len=256), dimension(:), allocatable :: selected
         character(len=256) :: file_name
-        type(atom), allocatable :: atom_list(:)
+        character, allocatable :: file_name2(:)
 
         ! Ask for file
         file_name(:) = ""
-        ret_val = hl_gtk_file_chooser_show(selected, create=FALSE, title="Select one .cif file"//c_null_char, &
+        ret_val = hl_gtk_file_chooser_show(selected, create=False, title="Select one .cif file"//c_null_char, &
             filter=filters, filter_name = filter_names, edit_filters=TRUE, parent=window, all=TRUE)
 
         ! Check if a file was selected
@@ -131,8 +161,14 @@ contains
         if (file_name(1:1) /= '/') return
 
         ! Open the .cif file and extract the atoms
+        has_file = .true.
+        write(*, "(AA)") "[~] Opening file ", file_name
+        crystal_name = cif_extract_name(file_name)
         atom_list = cif_extract_atoms(file_name)
         call print_atoms(atom_list)
+
+        ! Queue refresh
+        call gtk_widget_queue_draw(canvas)
     end subroutine
 
 end module gtk_application

@@ -8,8 +8,8 @@ contains
     function split_string(input_string, delimiter) result(tokens)
         character(*), intent(in) :: input_string
         character, intent(in) ::  delimiter
-        character(256) :: temp_string = ""
-        character(32), allocatable :: tokens(:)
+        character(256) :: temp_string
+        character(64), allocatable :: tokens(:)
         integer :: i, n_tokens, token_id
 
         ! Compute the number of tokens
@@ -20,7 +20,7 @@ contains
 
         ! Initialize the tokens array
         allocate(tokens(n_tokens))
-        tokens(:) = ""
+        tokens(:)(:) = ""
         temp_string(:) = ""
 
         ! Loop through the input string
@@ -30,8 +30,10 @@ contains
             if (input_string(i:i) == delimiter) then
                 ! Add the token to the token list
                 tokens(token_id) = adjustl(trim(temp_string))
-                token_id = token_id + 1
-                temp_string(:) = ""
+                if (temp_string(1:1) /= delimiter) then
+                    token_id = token_id + 1
+                    temp_string(:) = ""
+                endif
             else
                 ! Construct the current token
                 temp_string = trim(temp_string) // input_string(i:i)
