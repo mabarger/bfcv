@@ -1,6 +1,7 @@
 ! Module which provides functions and subroutine to create, interact with and control a gtk application
 module gtk_application
     use atoms
+    use cairo
     use cif
     use gtk
     use gtk_sup
@@ -15,9 +16,11 @@ module gtk_application
     public gtk_deinit_app
 
     ! Module variables
+    integer, parameter :: width_w = 1200, height_w = 800, width_c = 600, height_c = 600
     type(c_ptr) :: gtk_app = c_null_ptr
     type(c_ptr) :: window = c_null_ptr
     type(c_ptr) :: menu_bar = c_null_ptr
+    type(c_ptr) :: canvas = c_null_ptr
     integer(c_int) :: status = 0
     character(len=16), dimension(1) :: filters = ["*.cif"], filter_names = ["CIF files"]
 
@@ -35,7 +38,6 @@ contains
     ! Deinitializes the application
     subroutine gtk_deinit_app()
         call g_application_quit(gtk_app)
-        call g_object_unref(window)
     end subroutine
 
     ! Initializes the window and its contents
@@ -48,7 +50,7 @@ contains
         ! Create the window
         window = gtk_application_window_new(app)
         call gtk_window_set_title(window, "Basic Fortran CIF Viewer"//c_null_char)
-        call gtk_window_set_default_size(window, 480, 640)
+        call gtk_window_set_default_size(window, width_w, height_w)
 
         ! Create menu bar
         menu_bar = g_menu_new()
@@ -79,9 +81,28 @@ contains
         call gtk_application_set_menubar(app, menu_bar)
         call gtk_application_window_set_show_menubar(window, TRUE)
 
+        ! Create drawing area for the crystal display
+        canvas = gtk_drawing_area_new()
+        call gtk_drawing_area_set_content_width(canvas, width_c)
+        call gtk_drawing_area_set_content_height(canvas, height_c)
+        call gtk_drawing_area_set_draw_func(canvas, c_funloc(display_crystal), c_null_ptr, c_null_ptr)
+        call gtk_window_set_child(window, canvas)
+
         ! Display the window
         call gtk_widget_show(window)
         call gtk_window_present(window)
+    end subroutine
+
+    ! Called when the canvas is updated, displays the crystal structure if a file is loaded
+    subroutine display_crystal(widget, cairo_ctx, width, height, gdata) bind(c)
+        use, intrinsic :: iso_fortran_env, only: wp=>real64
+        type(c_ptr), value, intent(in) :: widget, cairo_ctx, gdata
+        integer(c_int), value, intent(in) :: width, height
+
+        ! Fill the background with a soft beige
+        call cairo_set_source_rgb(cairo_ctx, 245d0/255d0, 245d0/255d0, 220d0/255d0)
+        call cairo_rectangle(cairo_ctx, 0d0, 0d0, real(width, 8), real(height, 8))
+        call cairo_fill(cairo_ctx)
     end subroutine
 
     ! Called when the 'quit' button is pressed, exits the application
@@ -93,28 +114,25 @@ contains
     ! Called when the 'Open' button is pressed, opens a .cif file
     subroutine open_file(act, param, win) bind(c)
         type(c_ptr), value, intent(in) :: act, param, win
-        type(c_ptr) :: file_chooser = c_null_ptr
         integer(c_int) :: ret_val
         character(len=256), dimension(:), allocatable :: selected
         character(len=256) :: file_name
         type(atom), allocatable :: atom_list(:)
 
         ! Ask for file
+        file_name(:) = ""
         ret_val = hl_gtk_file_chooser_show(selected, create=FALSE, title="Select one .cif file"//c_null_char, &
             filter=filters, filter_name = filter_names, edit_filters=TRUE, parent=window, all=TRUE)
 
         ! Check if a file was selected
-        print *, ret_val
         if (ret_val == FALSE) return
-
-        ! Open the .cif file and extract the atoms
         file_name = selected(1)
         deallocate(selected)
+        if (file_name(1:1) /= '/') return
+
+        ! Open the .cif file and extract the atoms
         atom_list = cif_extract_atoms(file_name)
         call print_atoms(atom_list)
-
-        !ret_val = gtk_dialog_run(file_chooser)
-        !print *, ret_val
     end subroutine
 
 end module gtk_application
