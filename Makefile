@@ -1,7 +1,7 @@
 CC = gfortran
 CPP = $(CC) -cpp
 CCFLAGS = -g -Wall
-LDFLAGS = 
+LDFLAGS = `pkg-config --cflags --libs gtk-4-fortran`
 
 # Makefile settings - Can be customized.
 APPNAME = bfcv
@@ -9,11 +9,9 @@ EXT = .f90
 SRCDIR = src
 OBJDIR = obj
 
-############## Do not change anything from here downwards! #############
 SRC = $(wildcard $(SRCDIR)/*$(EXT))
 OBJ = $(SRC:$(SRCDIR)/%$(EXT)=$(OBJDIR)/%.o)
 DEP = $(OBJ:$(OBJDIR)/%.o=%.d)
-# UNIX-based OS variables & settings
 RM = rm
 
 all: $(APPNAME)
@@ -24,17 +22,20 @@ $(APPNAME): $(OBJ)
 
 # Creates the dependecy rules
 %.d: $(SRCDIR)/%$(EXT)
-	@$(CPP) $(CFLAGS) $< -MM -MT $(@:%.d=$(OBJDIR)/%.o) >$@
+	@$(CPP) $(CCFLAGS) $< -MM -MT $(@:%.d=$(OBJDIR)/%.o) >$@ $(LDFLAGS)
 
 # Includes all .h files
 -include $(DEP)
 
 # Building rule for .o files and its .c/.cpp in combination with all .h
 $(OBJDIR)/%.o: $(SRCDIR)/%$(EXT)
-	$(CC) $(CCFLAGS) -o $@ -c $<
+	$(CC) $(CCFLAGS) -o $@ -c $< $(LDFLAGS)
 
-################### Cleaning rules for Unix-based OS ###################
 # Cleans complete project
 .PHONY: clean
 clean:
 	$(RM) $(OBJ) $(DEP) $(APPNAME)
+
+# Runs project
+run: all
+	./$(APPNAME)

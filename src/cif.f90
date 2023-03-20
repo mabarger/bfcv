@@ -17,10 +17,9 @@ contains
         integer :: i, n_atoms, atom_start_index, fd, stat, coords_start_index
         character(256) :: line
         character(256), allocatable :: tokens(:)
-        type(atom) :: curr_atom
 
         ! Open file
-        print *, "[~] Opening file ", filename
+        write(*, "(AA)") "[~] Opening file ", filename
         open(newunit=fd, file=filename, status='old')
 
         ! Find the start of the atom positions and extract the number of atoms
@@ -80,18 +79,18 @@ contains
             endif
 
             ! Split the line into tokens
-            tokens = split_string(trim(line))
+            tokens = split_string(trim(line), ' ')
 
             ! Fill in the atom data
-            curr_atom%name = tokens(1)(1:8)
-            read(tokens(coords_start_index+0), *) curr_atom%x
-            read(tokens(coords_start_index+1), *) curr_atom%y
-            read(tokens(coords_start_index+2), *) curr_atom%z
-            atom_list(i) = curr_atom
+            atom_list(i)%name = tokens(1)(1:8)
+            read(tokens(coords_start_index+0), *) atom_list(i)%x
+            read(tokens(coords_start_index+1), *) atom_list(i)%y
+            read(tokens(coords_start_index+2), *) atom_list(i)%z
             deallocate(tokens)
         enddo
 
         ! Close file
         close(fd)
     end function
+
 end module cif

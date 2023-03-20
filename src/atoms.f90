@@ -20,6 +20,8 @@ contains
         type(atom), intent(in) :: atoms_in(:)
         integer :: i = 0
 
+        write(*, "(A)") "name      x_pos     y_pos     z_pos   "
+        write(*, "(A)") "======================================"
         do i = 1, size(atoms_in)
             call print_atom(atoms_in(i))
         enddo
