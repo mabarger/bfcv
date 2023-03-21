@@ -6,7 +6,7 @@ module atoms
     ! Atom type
     type :: atom
         character(8) :: name
-        real :: x, y, z
+        real(kind=8) :: x, y, z
     end type atom
 
 contains

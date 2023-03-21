@@ -55,6 +55,7 @@ contains
                 if (index(line, "loop_") > 0) exit
 
                 n_atoms = n_atoms + 1
+
             endif
 
             ! Find the start of the atom table
@@ -90,14 +91,9 @@ contains
 
             ! Fill in the atom data
             atom_list(i)%name = tokens(1)(1:8)
-            !TODO: Check for quality specifier (8) in coordinates
-
             atom_list(i)%x = cif_parse_real(tokens(coords_start_index+0))
             atom_list(i)%y = cif_parse_real(tokens(coords_start_index+1))
             atom_list(i)%z = cif_parse_real(tokens(coords_start_index+2))
-            !read(tokens(coords_start_index+0), *) atom_list(i)%x
-            !read(tokens(coords_start_index+1), *) atom_list(i)%y
-            !read(tokens(coords_start_index+2), *) atom_list(i)%z
             deallocate(tokens)
         enddo
 

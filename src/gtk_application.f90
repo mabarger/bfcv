@@ -108,32 +108,73 @@ contains
         type(c_ptr), value, intent(in) :: widget, cairo_ctx, gdata
         integer(c_int), value, intent(in) :: width, height
 
-        ! Clear screen
-        !call cairo_set_operator(cairo_ctx, CAIRO_OPERATOR_SOURCE)
-        !call cairo_set_source_rgb(cairo_ctx, 0d0, 0d0, 0d0)
-        !call cairo_paint(cairo_ctx)
+        ! Frame data
+        real(kind=8) :: frame_x, frame_y, frame_w, frame_h
+        frame_x = 10
+        frame_y = 60
+        frame_w = width - 20
+        frame_h = height - 70
+        frame_w = min(frame_w, frame_h)
+        frame_h = min(frame_w, frame_h)
 
         ! Fill the background with a soft beige
-        call cairo_set_source_rgb(cairo_ctx, 245d0/255d0, 245d0/255d0, 245d0/255d0)
+        call cairo_set_source_rgb(cairo_ctx, 245d0/255d0, 245d0/255d0, 220d0/255d0)
         call cairo_rectangle(cairo_ctx, 0d0, 0d0, real(width, 8), real(height, 8))
         call cairo_fill(cairo_ctx)
 
+        ! Draw crystal frame
+        call cairo_set_line_width(cairo_ctx, 5.0d0)
+        call cairo_set_source_rgb(cairo_ctx, 0.7d0, 0.7d0, 0.7d0)
+        call cairo_rectangle(cairo_ctx, frame_x, frame_y, frame_w, frame_h)
+        call cairo_stroke(cairo_ctx)
+
         ! Fill the background of the header with gray
-        call cairo_set_source_rgb(cairo_ctx, 0.5d0, 0.5d0, 0.5d0)
         call cairo_rectangle(cairo_ctx, 0d0, 0d0, real(width, 8), 50d0)
         call cairo_fill(cairo_ctx)
 
-        ! Display title (atom name if applicable)
+        ! Fill the background of the crystal frame with white
+        call cairo_set_source_rgb(cairo_ctx, 1.0d0, 1.0d0, 1.0d0)
+        !call cairo_rectangle(cairo_ctx, frame_x+5, frame_y+5, frame_w-10, frame_h-10)
+        call cairo_rectangle(cairo_ctx, frame_x, frame_y, frame_w, frame_h)
+        call cairo_fill(cairo_ctx)
+
+        ! Display title bar
         call cairo_set_source_rgb(cairo_ctx, 0.1d0, 0.1d0, 0.1d0)
         call cairo_set_font_size(cairo_ctx, 30d0)
-        call cairo_move_to(cairo_ctx, 0d0, 35d0)
+        call cairo_move_to(cairo_ctx, 10d0, 35d0)
+
+        ! If we don't have atom data yet then return
         if (has_file .eqv. .false.) then
             call cairo_show_text(cairo_ctx, "No CIF-file selected"//c_null_char)
             return
         endif
 
-        ! Display current atom data
+        ! Display current atom name
         call cairo_show_text(cairo_ctx, crystal_name//c_null_char)
+ 
+        ! Draw atoms
+        call draw_atom(cairo_ctx, atom_list(1), frame_x, frame_y, frame_w, frame_h)
+    end subroutine
+
+    ! Draws a single atom into the display frame
+    subroutine draw_atom(cairo_ctx, curr_atom, frame_x, frame_y, frame_w, frame_h)
+        type(c_ptr), value, intent(in) :: cairo_ctx
+        type(atom), intent(in) :: curr_atom
+        real(kind=8), intent(in) :: frame_x, frame_y, frame_w, frame_h
+
+        real(kind=8) :: x_pos = 0, y_pos = 0, z_pos = 0, radius = 0
+
+        ! Select color
+        call cairo_set_source_rgb(cairo_ctx, 1.0d0, 0.0d0, 0.0d0)
+
+        ! Compute position of atom relative to the frame
+        x_pos = frame_x + 0.5 * frame_w
+        y_pos = frame_y + 0.5 * frame_h
+        radius = 10
+
+        ! Draw atom
+        call cairo_arc(cairo_ctx, x_pos, y_pos, radius, 0d0, 2 * 3.14159d0)
+        call cairo_fill(cairo_ctx)
     end subroutine
 
     ! Called when the 'quit' button is pressed, exits the application
