@@ -1,6 +1,5 @@
 ! This program reads in a file describing a molecule and calculates the center of mass
 program bfcv
-    use atoms
     use gtk_application
     implicit none
 

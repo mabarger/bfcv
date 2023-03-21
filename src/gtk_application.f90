@@ -159,8 +159,8 @@ contains
     ! Draws a single atom into the display frame
     subroutine draw_atom(cairo_ctx, curr_atom, frame_x, frame_y, frame_w, frame_h)
         type(c_ptr), value, intent(in) :: cairo_ctx
-        type(atom), intent(in) :: curr_atom
         real(kind=8), intent(in) :: frame_x, frame_y, frame_w, frame_h
+        type(atom), intent(in) :: curr_atom
 
         real(kind=8) :: x_pos = 0, y_pos = 0, z_pos = 0, radius = 0
 
@@ -190,6 +190,7 @@ contains
         character(len=256), dimension(:), allocatable :: selected
         character(len=256) :: file_name
         character, allocatable :: file_name2(:)
+        type(atom), allocatable :: new_list(:)
 
         ! Ask for file
         file_name(:) = ""
@@ -202,6 +203,9 @@ contains
         deallocate(selected)
         if (file_name(1:1) /= '/') return
 
+        ! Delete old data if it was allocated
+        if (allocated(atom_list)) deallocate(atom_list)
+
         ! Open the .cif file and extract the relevant information
         has_file = .true.
         write(*, "(AA)") "[~] Opening file ", file_name
@@ -211,6 +215,12 @@ contains
         crystal_c = cif_extract_field_real(file_name, "_cell_length_c")
         print *, crystal_a, crystal_b, crystal_c
         atom_list = cif_extract_atoms(file_name)
+        call print_atoms(atom_list)
+
+        ! Apply the symmetry operations to the atoms
+        call cif_apply_symops(file_name, atom_list, new_list)
+        deallocate(atom_list)
+        atom_list = new_list
         call print_atoms(atom_list)
 
         ! Queue refresh

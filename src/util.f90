@@ -43,4 +43,18 @@ contains
         ! Extract last element if applicable
         tokens(token_id) = adjustl(trim(temp_string))
     end function 
+
+	! Removes leading whitespaces from a string
+    subroutine shift_string_left(string)
+        character(len=*), intent(inout) :: string
+        integer :: i
+
+		! Iterate over characters and find where the actual string starts
+		do i = 1, len(string)
+			if (string(i:i) /= " ") then
+				string = string(i:len(string))
+				return
+			end if
+		end do
+    end subroutine
 end module util
