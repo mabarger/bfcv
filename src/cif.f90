@@ -6,9 +6,11 @@ module cif
     private
     public cif_extract_atoms
     public cif_extract_name
+    public cif_extract_field
+    public cif_extract_field_real
 
     ! Module variables
-    character(*), parameter :: name_placeholder = "[!] Name not found in file"
+    character(*), parameter :: field_placeholder = "[!] Field not found in file"
 
 contains
     ! Extracts the information of all atoms in the file and returns them as an array
@@ -88,9 +90,14 @@ contains
 
             ! Fill in the atom data
             atom_list(i)%name = tokens(1)(1:8)
-            read(tokens(coords_start_index+0), *) atom_list(i)%x
-            read(tokens(coords_start_index+1), *) atom_list(i)%y
-            read(tokens(coords_start_index+2), *) atom_list(i)%z
+            !TODO: Check for quality specifier (8) in coordinates
+
+            atom_list(i)%x = cif_parse_real(tokens(coords_start_index+0))
+            atom_list(i)%y = cif_parse_real(tokens(coords_start_index+1))
+            atom_list(i)%z = cif_parse_real(tokens(coords_start_index+2))
+            !read(tokens(coords_start_index+0), *) atom_list(i)%x
+            !read(tokens(coords_start_index+1), *) atom_list(i)%y
+            !read(tokens(coords_start_index+2), *) atom_list(i)%z
             deallocate(tokens)
         enddo
 
@@ -98,10 +105,10 @@ contains
         close(fd)
     end function
 
-    ! Extracts the compound name from the .cif file
-    function cif_extract_name(filename) result(crystal_name)
-        character(*), intent(in) :: filename
-        character(len=:), allocatable :: crystal_name
+    ! Extracts the first occurance of a given field from the cif file
+    function cif_extract_field(file_name, field_name) result(field_content)
+        character(*), intent(in) :: file_name, field_name
+        character(len=:), allocatable :: field_content
 
         ! Function variables
         integer :: fd = 0, stat = 0, str_len = 0
@@ -109,10 +116,10 @@ contains
         character(256), allocatable :: tokens(:)
 
         ! Open file
-        open(newunit=fd, file=filename, status='old')
+        open(newunit=fd, file=file_name, status='old')
         if (stat /= 0) return
 
-        ! Iterate over lines until we find the name
+        ! Iterate over lines until we find the given field
         line(:) = ""
         do
             ! Read current line and check for errors
@@ -120,25 +127,66 @@ contains
             if (stat < 0) exit
 
             ! Check for the mineral name field
-            if (index(line, "_chemical_name_mineral") /= 0) then
+            if (index(line, field_name) /= 0) then
                 tokens = split_string(trim(line), ' ')
                 if (len(tokens(2)) < 2) then
-                    print *, "[!] Invalid format for CIF file"
+                    print *, "[!] Field " // field_name // " not in file"
                 endif
 
                 ! Copy name over and return it
                 line = tokens(2)
                 str_len = len(trim(line))
-                allocate(character(str_len) :: crystal_name)
-                crystal_name = line
+                allocate(character(str_len) :: field_content)
+                field_content = line
                 deallocate(tokens)
 
                 return
             endif
         enddo
 
+        ! Close file
+        close(fd)
+
         ! No name was found, add placeholder
-        allocate(character(len(name_placeholder)):: crystal_name)
-        crystal_name(:) = name_placeholder
+        allocate(character(len(field_placeholder)) :: field_content)
+        field_content(:) = field_placeholder
+    end function
+
+    ! Extracts a field and converts it into a real
+    function cif_extract_field_real(file_name, field_name) result(field_content)
+        character(*), intent(in) :: file_name, field_name
+        character(len=:), allocatable :: field_str
+        real(kind=8) :: field_content
+
+        ! Extract and parse the real
+        field_str = cif_extract_field(file_name, field_name)
+        field_content = cif_parse_real(field_str)
+    end function
+
+    ! Extracts the compound name from the .cif file
+    function cif_extract_name(file_name) result(crystal_name)
+        character(*), intent(in) :: file_name
+        character(len=:), allocatable :: crystal_name
+
+        crystal_name = cif_extract_field(file_name, "_chemical_name_mineral")
+    end function
+
+    ! Tries to parse a real from a cif file, if not possible returns 0.0
+    function cif_parse_real(string) result(res)
+        character(*), intent(inout) :: string
+        real(kind=8) :: res
+        integer :: idx = 0, i = 0
+
+        ! Check if we have a precision specifier and if yes remove it
+        res = 0.0
+        idx = index(string, '(')
+        if (idx > 0) then
+            do i = idx, len(string)
+                string(i:i) = ' '
+            enddo
+        endif
+
+        ! Parse the real value
+        read(string, *), res
     end function
 end module cif

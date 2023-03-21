@@ -28,6 +28,7 @@ module gtk_application
     ! Current crystal
     character(:), allocatable :: crystal_name
     type(atom), allocatable :: atom_list(:)
+    real(kind=8) :: crystal_a = 0.0, crystal_b = 0.0, crystal_c = 0.0
 
 contains
     ! Initializes the application
@@ -152,7 +153,7 @@ contains
         ! Ask for file
         file_name(:) = ""
         ret_val = hl_gtk_file_chooser_show(selected, create=False, title="Select one .cif file"//c_null_char, &
-            filter=filters, filter_name = filter_names, edit_filters=TRUE, parent=window, all=TRUE)
+            filter=filters, filter_name = filter_names, parent=window, all=TRUE)
 
         ! Check if a file was selected
         if (ret_val == FALSE) return
@@ -160,10 +161,14 @@ contains
         deallocate(selected)
         if (file_name(1:1) /= '/') return
 
-        ! Open the .cif file and extract the atoms
+        ! Open the .cif file and extract the relevant information
         has_file = .true.
         write(*, "(AA)") "[~] Opening file ", file_name
         crystal_name = cif_extract_name(file_name)
+        crystal_a = cif_extract_field_real(file_name, "_cell_length_a")
+        crystal_b = cif_extract_field_real(file_name, "_cell_length_b")
+        crystal_c = cif_extract_field_real(file_name, "_cell_length_c")
+        print *, crystal_a, crystal_b, crystal_c
         atom_list = cif_extract_atoms(file_name)
         call print_atoms(atom_list)
 
