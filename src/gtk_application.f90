@@ -79,7 +79,7 @@ contains
         ! Add buttons to menu bar
         call g_menu_append_item(section, menu_item_open)
         call g_menu_append_item(section, menu_item_quit)
-        call g_menu_append_section(menu, "@-->--->---"//c_null_char, section)
+        call g_menu_append_section(menu, "💮💮 @-->--->--- 💮💮"//c_null_char, section)
         call g_menu_append_submenu(menu_bar, "Menu"//c_null_char, menu)
 
         ! Deallocate used memory
@@ -107,6 +107,7 @@ contains
         use, intrinsic :: iso_fortran_env, only: wp=>real64
         type(c_ptr), value, intent(in) :: widget, cairo_ctx, gdata
         integer(c_int), value, intent(in) :: width, height
+        integer :: i
 
         ! Frame data
         real(kind=8) :: frame_x, frame_y, frame_w, frame_h
@@ -153,7 +154,15 @@ contains
         call cairo_show_text(cairo_ctx, crystal_name//c_null_char)
  
         ! Draw atoms
-        call draw_atom(cairo_ctx, atom_list(1), frame_x, frame_y, frame_w, frame_h)
+        do i = 1, size(atom_list)
+            if (atom_list(i)%x < 0.0) atom_list(i)%x = atom_list(i)%x + 1
+            if (atom_list(i)%y < 0.0) atom_list(i)%y = atom_list(i)%y + 1
+            if (atom_list(i)%z < 0.0) atom_list(i)%z = atom_list(i)%z + 1
+            if (atom_list(i)%x > 1.0) atom_list(i)%x = atom_list(i)%x - 1
+            if (atom_list(i)%y > 1.0) atom_list(i)%y = atom_list(i)%y - 1
+            if (atom_list(i)%z > 1.0) atom_list(i)%z = atom_list(i)%z - 1
+            call draw_atom(cairo_ctx, atom_list(i), frame_x, frame_y, frame_w, frame_h)
+        enddo
     end subroutine
 
     ! Draws a single atom into the display frame
@@ -165,11 +174,11 @@ contains
         real(kind=8) :: x_pos = 0, y_pos = 0, z_pos = 0, radius = 0
 
         ! Select color
-        call cairo_set_source_rgb(cairo_ctx, 1.0d0, 0.0d0, 0.0d0)
+        call cairo_set_source_rgb(cairo_ctx, 0.0d0, 0.7d0, 0.7d0)
 
         ! Compute position of atom relative to the frame
-        x_pos = frame_x + 0.5 * frame_w
-        y_pos = frame_y + 0.5 * frame_h
+        x_pos = frame_x + 50 + curr_atom%x * (frame_w - 100)
+        y_pos = frame_y + 50 + curr_atom%y * (frame_h - 100)
         radius = 10
 
         ! Draw atom
@@ -221,6 +230,8 @@ contains
         call cif_apply_symops(file_name, atom_list, new_list)
         deallocate(atom_list)
         atom_list = new_list
+        call print_atoms(atom_list)
+        atom_list = remove_duplicate_atoms(atom_list)
         call print_atoms(atom_list)
 
         ! Queue refresh

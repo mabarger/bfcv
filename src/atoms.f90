@@ -9,6 +9,96 @@ module atoms
         real(kind=8) :: x, y, z
     end type atom
 
+    ! Constant tables
+    character(len=2), dimension(86), parameter :: element_names = (/ &
+        "H ", &! Hydrogen
+        "He", &! Helium
+        "Li", &! Lithium
+        "Be", &! Beryllium
+        "B ", &! Boron
+        "C ", &! Carbon
+        "N ", &! Nitrogen
+        "O ", &! Oxygen
+        "F ", &! Fluorine
+        "Ne", &! Neon
+        "Na", &! Sodium
+        "Mg", &! Magnesium
+        "Al", &! Aluminum
+        "Si", &! Silicon
+        "P ", &! Phosphorus
+        "S ", &! Sulfur
+        "Cl", &! Chlorine
+        "Ar", &! Argon
+        "K ", &! Potassium
+        "Ca", &! Calcium
+        "Sc", &! Scandium
+        "Ti", &! Titanium
+        "V ", &! Vanadium
+        "Cr", &! Chromium
+        "Mn", &! Manganese
+        "Fe", &! Iron
+        "Co", &! Cobalt
+        "Ni", &! Nickel
+        "Cu", &! Copper
+        "Zn", &! Zinc
+        "Ga", &! Gallium
+        "Ge", &! Germanium
+        "As", &! Arsenic
+        "Se", &! Selenium
+        "Br", &! Bromine
+        "Kr", &! Krypton
+        "Rb", &! Rubidium
+        "Sr", &! Strontium
+        "Y ", &! Yttrium
+        "Zr", &! Zirconium
+        "Nb", &! Niobium
+        "Mo", &! Molybdenum
+        "Tc", &! Technetium
+        "Ru", &! Ruthenium
+        "Rh", &! Rhodium
+        "Pd", &! Palladium
+        "Ag", &! Silver
+        "Cd", &! Cadmium
+        "In", &! Indium
+        "Sn", &! Tin
+        "Sb", &! Antimony
+        "Te", &! Tellurium
+        "I ", &! Iodine
+        "Xe", &! Xenon
+        "Cs", &! Cesium
+        "Ba", &! Barium
+        "La", &! Lanthanum
+        "Ce", &! Cerium
+        "Pr", &! Praseodymium
+        "Nd", &! Neodymium
+        "Pm", &! Promethium
+        "Sm", &! Samarium
+        "Eu", &! Europium
+        "Gd", &! Gadolinium
+        "Tb", &! Terbium
+        "Dy", &! Dysprosium
+        "Ho", &! Holmium
+        "Er", &! Erbium
+        "Tm", &! Thulium
+        "Yb", &! Ytterbium
+        "Lu", &! Lutetium
+        "Hf", &! Hafnium
+        "Ta", &! Tantalum
+        "W ", &! Tungsten
+        "Re", &! Rhenium
+        "Os", &! Osmium
+        "Ir", &! Iridium
+        "Pt", &! Platinum
+        "Au", &! Gold
+        "Hg", &! Mercury
+        "Tl", &! Thallium
+        "Pb", &! Lead
+        "Bi", &! Bismuth
+        "Po", &! Polonium
+        "At", &! Astatine
+        "Rn"  &! Radon
+    /)
+
 contains
     ! Prints the contents of an atom nicely
     subroutine print_atom(atom_in)
@@ -16,6 +106,7 @@ contains
         write(*, "(A,F10.6,F10.6,F10.6)") atom_in%name, atom_in%x, atom_in%y, atom_in%z
     end subroutine
 
+    ! Prints the atoms in an array neatly
     subroutine print_atoms(atoms_in)
         type(atom), intent(in) :: atoms_in(:)
         integer :: i = 0
@@ -26,5 +117,37 @@ contains
             call print_atom(atoms_in(i))
         enddo
     end subroutine
+
+    ! Removes position-duplicates in an array of atoms
+    function remove_duplicate_atoms(array) result(result_array)
+        type(atom), dimension(:), allocatable, intent(inout) :: array
+        type(atom), dimension(:), allocatable :: result_array
+        integer :: i, j, n
+
+        n = size(array)
+        allocate(result_array(n))
+
+        result_array(1) = array(1)
+        j = 1
+
+        ! For each element in the array check if it is also in the result array
+        do i = 2, n
+            if ( .not. (any(array(i)%x == result_array(1:j)%x) .and. &
+                any(array(i)%y == result_array(1:j)%y) .and. &
+                any(array(i)%z == result_array(1:j)%z) &
+            ) ) then
+                ! Element is unique, add it to result
+                j = j + 1
+                result_array(j) = array(i)
+            endif
+        end do
+
+        ! Deallocate memory and swap result back
+        print *, j
+        array(:) = result_array(:j)
+        deallocate(result_array)
+        allocate(result_array(j))
+        result_array(:) = array(:j)
+    end function
 
 end module atoms
