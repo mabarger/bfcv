@@ -233,13 +233,13 @@ contains
         call cif_apply_symops(file_name, atom_list, new_list)
         deallocate(atom_list)
         atom_list = new_list
-        atom_list = remove_duplicate_atoms(atom_list)
+        !atom_list = remove_duplicate_atoms(atom_list)
+        call cif_remove_duplicates_mirror_safe(atom_list)
 
         ! Mirror atoms
         new_list = cif_mirror_atoms(atom_list)
         deallocate(atom_list)
         atom_list = new_list
-        !atom_list = remove_duplicate_atoms(atom_list)
         call print_atoms(atom_list)
 
         ! Queue refresh

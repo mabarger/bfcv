@@ -11,6 +11,7 @@ module cif
     public cif_extract_field_real
     public cif_apply_symops
     public cif_mirror_atoms
+    public cif_remove_duplicates_mirror_safe
 
     ! Module variables
     character(*), parameter :: field_placeholder = "[!] Field not found in file"
@@ -426,6 +427,8 @@ contains
         temp_list(:) = new_list(:atom_idx)
         deallocate(new_list)
         new_list = temp_list
+
+        call cif_remove_duplicates_mirror_safe(new_list)
     end function
 
     ! Helper subroutine, which performs the mirror operation on a single atom and places the resulting atoms in the atom_list
@@ -448,17 +451,62 @@ contains
                     atom_list(atom_idx)%name = curr_atom%name
 
                     ! Normalize positions if applicable
-                    if (atom_list(atom_idx)%x > (1.0 + eps)) atom_list(atom_idx)%x = atom_list(atom_idx)%x - 1
-                    if (atom_list(atom_idx)%y > (1.0 + eps)) atom_list(atom_idx)%y = atom_list(atom_idx)%y - 1
-                    if (atom_list(atom_idx)%z > (1.0 + eps)) atom_list(atom_idx)%z = atom_list(atom_idx)%z - 1
-                    if (atom_list(atom_idx)%x < (0.0 - eps)) atom_list(atom_idx)%x = atom_list(atom_idx)%x + 1
-                    if (atom_list(atom_idx)%y < (0.0 - eps)) atom_list(atom_idx)%y = atom_list(atom_idx)%y + 1
-                    if (atom_list(atom_idx)%z < (0.0 - eps)) atom_list(atom_idx)%z = atom_list(atom_idx)%z + 1
+                    if (atom_list(atom_idx)%x > (1.0 + eps)) atom_list(atom_idx)%x = atom_list(atom_idx)%x - 1.0d0
+                    if (atom_list(atom_idx)%y > (1.0 + eps)) atom_list(atom_idx)%y = atom_list(atom_idx)%y - 1.0d0
+                    if (atom_list(atom_idx)%z > (1.0 + eps)) atom_list(atom_idx)%z = atom_list(atom_idx)%z - 1.0d0
+                    if (atom_list(atom_idx)%x < (0.0 - eps)) atom_list(atom_idx)%x = atom_list(atom_idx)%x + 1.0d0
+                    if (atom_list(atom_idx)%y < (0.0 - eps)) atom_list(atom_idx)%y = atom_list(atom_idx)%y + 1.0d0
+                    if (atom_list(atom_idx)%z < (0.0 - eps)) atom_list(atom_idx)%z = atom_list(atom_idx)%z + 1.0d0
 
                     ! Advance index
                     atom_idx = atom_idx + 1
                 end do
             end do
         end do
+    end subroutine
+
+    ! Removes duplicates from an atom array with respect to mirror/folding properties
+    subroutine cif_remove_duplicates_mirror_safe(atom_list)
+        type(atom), allocatable, dimension(:), intent(inout) :: atom_list
+        type(atom), allocatable, dimension(:) :: new_list
+        integer :: i, j, n, atom_idx
+        logical :: is_unique
+
+        ! Allocate new array
+        n = size(atom_list)
+        allocate(new_list(n))
+        new_list(:)%x = 0
+        new_list(:)%y = 0
+        new_list(:)%z = 0
+        new_list(:)%name = "N/A"
+        new_list(1) = atom_list(1)
+
+        ! Iterate over old array
+        atom_idx = 1
+        do i = 2, n
+            is_unique = .true.
+            do j = 1, atom_idx
+                if (abs(atom_list(i)%x) == abs(new_list(j)%x) .and. &
+                    abs(atom_list(i)%y) == abs(new_list(j)%y) .and. &
+                    abs(atom_list(i)%z) == abs(new_list(j)%z)) then
+
+                    ! A matching atom has been found, therefore not unique
+                    is_unique = .false.
+                    exit
+                endif
+            enddo
+
+            ! Atom is uniqe
+            if (is_unique) then
+                atom_idx = atom_idx + 1
+                new_list(j) = atom_list(i)
+            endif 
+        enddo
+
+        ! Reallocate list to match actual size
+        deallocate(atom_list)
+        allocate(atom_list(atom_idx))
+        atom_list(:) = new_list(:atom_idx)
+        deallocate(new_list)
     end subroutine
 end module cif

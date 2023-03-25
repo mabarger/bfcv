@@ -118,36 +118,4 @@ contains
             call print_atom(atoms_in(i))
         enddo
     end subroutine
-
-    ! Removes position-duplicates in an array of atoms
-    function remove_duplicate_atoms(array) result(result_array)
-        type(atom), dimension(:), allocatable, intent(inout) :: array
-        type(atom), dimension(:), allocatable :: result_array
-        integer :: i, j, n
-
-        n = size(array)
-        allocate(result_array(n))
-
-        result_array(1) = array(1)
-        j = 1
-
-        ! For each element in the array check if it is also in the result array
-        do i = 2, n
-            if ( .not. ((any(abs(array(i)%x - result_array(1:j)%x) < eps)) .and. &
-                any((abs(array(i)%y - result_array(1:j)%y) < eps)) .and. &
-                any((abs(array(i)%z - result_array(1:j)%z) < eps)) &
-            ) ) then
-                ! Element is unique, add it to result
-                j = j + 1
-                result_array(j) = array(i)
-            endif
-        end do
-
-        ! Deallocate memory and swap result back
-        array(:) = result_array(:j)
-        deallocate(result_array)
-        allocate(result_array(j))
-        result_array(:) = array(:j)
-    end function
-
 end module atoms
