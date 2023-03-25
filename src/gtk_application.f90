@@ -217,6 +217,7 @@ contains
 
         ! Delete old data if it was allocated
         if (allocated(atom_list)) deallocate(atom_list)
+        if (allocated(crystal_name)) deallocate(crystal_name)
 
         ! Open the .cif file and extract the relevant information
         has_file = .true.
@@ -235,7 +236,10 @@ contains
         atom_list = remove_duplicate_atoms(atom_list)
 
         ! Mirror atoms
-        atom_list = cif_mirror_atoms(atom_list)
+        new_list = cif_mirror_atoms(atom_list)
+        deallocate(atom_list)
+        atom_list = new_list
+        !atom_list = remove_duplicate_atoms(atom_list)
         call print_atoms(atom_list)
 
         ! Queue refresh

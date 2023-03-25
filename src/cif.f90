@@ -14,7 +14,8 @@ module cif
 
     ! Module variables
     character(*), parameter :: field_placeholder = "[!] Field not found in file"
-    real, parameter :: eps = 0.0001
+    !real, parameter :: eps = 0.0001
+    integer, parameter :: matrix_transf_scale = 128
 
 contains
     ! Extracts the information of all atoms in the file and returns them as an array
@@ -399,26 +400,32 @@ contains
     ! Mirrors atoms at the edge of the unit cell and returns the new list of atoms in new_list
     function cif_mirror_atoms(atom_list) result(new_list)
         type(atom), allocatable, intent(inout) :: atom_list(:)
-        type(atom), allocatable :: new_list(:)
+        type(atom), allocatable :: new_list(:), temp_list(:)
         integer :: i = 0, atom_idx = 1
 
         ! Speculatively allocate as much memory as needed at maximum
         ! Note: The mirroring is done by applying a transformation matrix to all atoms and then
         ! filtering out duplicates afterward and trimming the list (See cif_mirror_atom)
-        allocate(new_list(size(atom_list) * 128))
+        allocate(new_list(size(atom_list) * matrix_transf_scale))
         new_list(:)%x = 0
         new_list(:)%y = 0
         new_list(:)%z = 0
         new_list(:)%name = "N/A"
 
         ! Iterate over existing atoms
+        atom_idx = 1
         do i = 1, size(atom_list)
-			! Mirror the single atom
+			! Mirror the current atom
 			call cif_mirror_atom(atom_list(i), new_list, atom_idx)
         enddo
 
-        ! Free old list and reallocate appropriate memory for the new list
-        deallocate(atom_list)
+        atom_idx = atom_idx - 1
+
+        ! Reallocate to proper size
+        allocate(temp_list(atom_idx))
+        temp_list(:) = new_list(:atom_idx)
+        deallocate(new_list)
+        new_list = temp_list
     end function
 
     ! Helper subroutine, which performs the mirror operation on a single atom and places the resulting atoms in the atom_list
@@ -429,7 +436,7 @@ contains
 
         integer :: i = 0, j = 0, k = 0
 
-        ! Triple loop to account for mirroring in all three dimensions (e.g. if x/y/z is 0/0/0 then it should be mirrored to all corners)
+        ! 3D loop to account for mirroring in all three dimensions (e.g. if x/y/z is 0/0/0 then it should be mirrored to all corners)
         ! Basically this works like a transformation matrix that is applied to the atoms in the list
         do i = -1, 1
             do j = -1, 1

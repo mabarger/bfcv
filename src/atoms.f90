@@ -9,7 +9,8 @@ module atoms
         real(kind=8) :: x, y, z
     end type atom
 
-    ! Constant tables
+    ! Constants and tables
+    real(kind=8), parameter :: eps = 0.0001
     character(len=2), dimension(86), parameter :: element_names = (/ &
         "H ", &! Hydrogen
         "He", &! Helium
@@ -132,9 +133,9 @@ contains
 
         ! For each element in the array check if it is also in the result array
         do i = 2, n
-            if ( .not. (any(array(i)%x == result_array(1:j)%x) .and. &
-                any(array(i)%y == result_array(1:j)%y) .and. &
-                any(array(i)%z == result_array(1:j)%z) &
+            if ( .not. ((any(abs(array(i)%x - result_array(1:j)%x) < eps)) .and. &
+                any((abs(array(i)%y - result_array(1:j)%y) < eps)) .and. &
+                any((abs(array(i)%z - result_array(1:j)%z) < eps)) &
             ) ) then
                 ! Element is unique, add it to result
                 j = j + 1
