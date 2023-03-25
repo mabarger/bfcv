@@ -251,4 +251,27 @@ contains
             call match_atom_name(atoms_in(i))
         enddo
     end subroutine
+
+    ! Sorts atoms based on their z-coordinate
+    subroutine sort_atoms_by_z(atoms_in)
+        type(atom), intent(inout) :: atoms_in(:)
+        integer :: i, j, min_idx, n
+        type(atom) :: temp
+
+        n = size(atoms_in)
+
+        do i = 1, n-1
+            min_idx = i
+            do j = i+1, n
+                if (atoms_in(j)%z < atoms_in(min_idx)%z) then
+                min_idx = j
+                endif
+            enddo
+            if (min_idx /= i) then
+                temp = atoms_in(i)
+                atoms_in(i) = atoms_in(min_idx)
+                atoms_in(min_idx) = temp
+            endif
+        enddo
+    end subroutine
 end module atoms

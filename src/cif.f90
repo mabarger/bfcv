@@ -16,7 +16,7 @@ module cif
     ! Module variables
     character(*), parameter :: field_placeholder = "[!] Field not found in file"
     !real, parameter :: eps = 0.0001
-    integer, parameter :: matrix_transf_scale = 128
+    integer, parameter :: matrix_transf_scale = 64
 
 contains
     ! Extracts the information of all atoms in the file and returns them as an array

@@ -185,7 +185,7 @@ contains
         ! Compute position of atom relative to the frame
         x_pos = frame_x + 50 + curr_atom%x * (frame_w - 100)
         y_pos = frame_y + 50 + curr_atom%y * (frame_h - 100)
-        radius = 10
+        radius = 20 * curr_atom%z
 
         ! Draw atom
         call cairo_arc(cairo_ctx, x_pos, y_pos, radius, 0d0, 2 * 3.14159d0)
@@ -245,8 +245,12 @@ contains
         ! Try to derive the actual atom name if applicable
         call match_atom_names(atom_list)
 
+        ! Sort atoms by z-coordinate so we can print in a 3d fashion
+        call sort_atoms_by_z(atom_list)
+
         ! Queue refresh
         call gtk_widget_queue_draw(canvas)
+        call print_atoms(atom_list)
     end subroutine
 
 end module gtk_application
