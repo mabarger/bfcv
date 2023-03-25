@@ -118,4 +118,30 @@ contains
             call print_atom(atoms_in(i))
         enddo
     end subroutine
+
+    subroutine match_atom_name(curr_atom)
+        type(atom), intent(inout) :: curr_atom
+        integer :: i
+
+        ! Regular check
+        do i = 1, size(element_names)
+            ! Check if the name matches to omit subspecifiers (e.g. O2 or N_an)
+            if (curr_atom%name(1:2) == element_names(i)(1:2)) then
+                curr_atom%name(:) = ""
+                curr_atom%name(1:2) = element_names(i)(1:2)
+                return
+            endif
+        enddo
+
+        ! If no match was found try to look for single letter names
+        do i = 1, size(element_names)
+            ! Check if the name matches to omit subspecifiers (e.g. O2 or N_an)
+            if (curr_atom%name(1:1) == element_names(i)(1:1)) then
+                curr_atom%name(:) = ""
+                curr_atom%name(1:2) = element_names(i)(1:2)
+                return
+            endif
+        enddo
+
+    end subroutine
 end module atoms

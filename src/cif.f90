@@ -100,6 +100,9 @@ contains
             atom_list(i)%x = cif_parse_real(tokens(coords_start_index+0))
             atom_list(i)%y = cif_parse_real(tokens(coords_start_index+1))
             atom_list(i)%z = cif_parse_real(tokens(coords_start_index+2))
+
+            ! Try to derive the actual atom name if applicable
+            call match_atom_name(atom_list(i))
             deallocate(tokens)
         enddo
 
