@@ -3,6 +3,11 @@ module util
     implicit none
     public
 
+    ! rgb color for use in gtk
+    type color
+        real(kind=8) :: r, g, b
+    end type
+
 contains
     ! Splits a string into tokens based on the delimiter `delim` on a trimmed input string
     function split_string(input_string, delimiter) result(tokens)

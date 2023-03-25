@@ -176,9 +176,11 @@ contains
         type(atom), intent(in) :: curr_atom
 
         real(kind=8) :: x_pos = 0, y_pos = 0, z_pos = 0, radius = 0
+        type(color) :: elem_color
 
         ! Select color
-        call cairo_set_source_rgb(cairo_ctx, 0.0d0, 0.7d0, 0.7d0)
+        elem_color = element_colors(curr_atom%id)
+        call cairo_set_source_rgb(cairo_ctx, elem_color%r, elem_color%g, elem_color%b)
 
         ! Compute position of atom relative to the frame
         x_pos = frame_x + 50 + curr_atom%x * (frame_w - 100)
@@ -233,14 +235,15 @@ contains
         call cif_apply_symops(file_name, atom_list, new_list)
         deallocate(atom_list)
         atom_list = new_list
-        !atom_list = remove_duplicate_atoms(atom_list)
         call cif_remove_duplicates_mirror_safe(atom_list)
 
         ! Mirror atoms
         new_list = cif_mirror_atoms(atom_list)
         deallocate(atom_list)
         atom_list = new_list
-        call print_atoms(atom_list)
+
+        ! Try to derive the actual atom name if applicable
+        call match_atom_names(atom_list)
 
         ! Queue refresh
         call gtk_widget_queue_draw(canvas)
