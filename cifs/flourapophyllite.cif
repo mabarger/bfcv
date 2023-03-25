@@ -1,0 +1,104 @@
+#------------------------------------------------------------------------------
+#$Date: 2023-03-24 18:37:27 +0200 (Fri, 24 Mar 2023) $
+#$Revision: 282053 $
+#$URL: file:///home/coder/svn-repositories/cod/cif/9/00/02/9000245.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/. The original data for this entry
+# were provided the American Mineralogist Crystal Structure Database,
+# http://rruff.geo.arizona.edu/AMS/amcsd.php
+#
+# The file may be used within the scientific community so long as
+# proper attribution is given to the journal article from which the
+# data were obtained.
+#
+data_9000245
+loop_
+_publ_author_name
+'Colville, A. A.'
+'Anderson, C. P.'
+'Black, P. M.'
+_publ_section_title
+;
+ Refinement of the crystal structure of apophyllite I. X-ray diffraction and
+ physical properties
+;
+_journal_name_full               'American Mineralogist'
+_journal_page_first              1222
+_journal_page_last               1233
+_journal_volume                  56
+_journal_year                    1971
+_chemical_compound_source
+'Phoenix mine, Keweenaw Peninsula, Michigan, USA'
+_chemical_formula_sum            'Ca4 F H16 K0.84 Na0.16 O28 Si8'
+_chemical_name_mineral           Fluorapophyllite
+_space_group_IT_number           128
+_symmetry_space_group_name_Hall  '-P 4 2n'
+_symmetry_space_group_name_H-M   'P 4/m n c'
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_length_a                   8.963
+_cell_length_b                   8.963
+_cell_length_c                   15.804
+_cell_volume                     1269.620
+_database_code_amcsd             0000252
+_exptl_crystal_density_diffrn    2.366
+_cod_original_formula_sum        '(K.84 Na.16) Ca4 Si8 O28 F H16'
+_cod_database_code               9000245
+loop_
+_space_group_symop_operation_xyz
+x,y,z
+1/2-y,1/2-x,1/2+z
+1/2+y,1/2+x,1/2-z
+y,-x,-z
+-y,x,z
+1/2+x,1/2-y,1/2+z
+1/2-x,1/2+y,1/2-z
+x,y,-z
+-x,-y,z
+1/2+y,1/2+x,1/2+z
+1/2-y,1/2-x,1/2-z
+-y,x,-z
+y,-x,z
+1/2-x,1/2+y,1/2+z
+1/2+x,1/2-y,1/2-z
+-x,-y,-z
+loop_
+_atom_site_aniso_label
+_atom_site_aniso_U_11
+_atom_site_aniso_U_22
+_atom_site_aniso_U_33
+_atom_site_aniso_U_12
+_atom_site_aniso_U_13
+_atom_site_aniso_U_23
+K 0.02533 0.02533 0.06308 0.00000 0.00000 0.00000
+Na 0.02533 0.02533 0.06308 0.00000 0.00000 0.00000
+Ca 0.00735 0.00861 0.00760 0.00081 0.00000 0.00000
+Si 0.00697 0.00697 0.01014 -0.00038 -0.00215 0.00000
+O1 0.01013 0.01013 0.00760 -0.00127 -0.00291 -0.00291
+O2 0.00861 0.01304 0.02255 0.00405 -0.00076 -0.00431
+O3 0.01229 0.01267 0.01267 0.00127 -0.00291 -0.00139
+F 0.00697 0.00697 0.03661 0.00000 0.00000 0.00000
+Wat4 0.03344 0.01431 0.01899 -0.00165 -0.00076 -0.00507
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+K 0.00000 0.00000 0.50000 0.84000
+Na 0.00000 0.00000 0.50000 0.16000
+Ca 0.11020 0.24600 0.00000 1.00000
+Si 0.22580 0.08640 0.19000 1.00000
+O1 0.36350 0.13650 0.25000 1.00000
+O2 0.08430 0.18990 0.21770 1.00000
+O3 0.26420 0.10200 0.09230 1.00000
+F 0.00000 0.00000 0.00000 1.00000
+Wat4 0.21280 0.44980 0.09000 1.00000
+loop_
+_cod_related_entry_id
+_cod_related_entry_database
+_cod_related_entry_code
+1 AMCSD 0000252

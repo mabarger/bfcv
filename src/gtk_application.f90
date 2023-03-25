@@ -151,7 +151,7 @@ contains
         endif
 
         ! Display current atom name (with the systematic name in parenthesis if it was in the file)
-        if (len_trim(systematic_name) > 0) then
+        if (len_trim(systematic_name) > 0 .and. len_trim(systematic_name) /= 256) then
             call cairo_show_text(cairo_ctx, trim(crystal_name) // " (" // trim(systematic_name) // ")" // c_null_char)
         else
             call cairo_show_text(cairo_ctx, crystal_name // c_null_char)
@@ -236,6 +236,7 @@ contains
         deallocate(atom_list)
         atom_list = new_list
         call cif_remove_duplicates_mirror_safe(atom_list)
+        call print_atoms(atom_list)
 
         ! Mirror atoms
         new_list = cif_mirror_atoms(atom_list)

@@ -65,7 +65,7 @@ contains
             endif
 
             ! Find the start of the atom table
-            if (atom_start_index == 0 .and. index(line, '_atom') > 0) then
+            if (atom_start_index == 0 .and. index(line, '_atom_site_label') > 0) then
                 atom_start_index = 1
                 coords_start_index = i
             endif
@@ -217,7 +217,7 @@ contains
             if (stat < 0) exit
 
             ! Check for the start of the symops
-            if (index(line, "_symmetry_equiv_pos_as_xyz") /= 0) then
+            if (index(line, "_symmetry_equiv_pos_as_xyz") /= 0 .or. index(line, "_space_group_symop_operation_xyz") /= 0) then
                 ! Iterate over the symops
                 do
                     ! Read current line and check for errors
@@ -232,6 +232,7 @@ contains
 
         ! Rewind fd
         rewind(fd)
+        if (n_symops == 0) return
 
         ! Allocate memory for the new atom list
         allocate(new_list(n_symops * size(atom_list)))
@@ -249,7 +250,7 @@ contains
             if (stat < 0) exit
 
             ! Check for the start of the symops
-            if (index(line, "_symmetry_equiv_pos_as_xyz") /= 0) then
+            if (index(line, "_symmetry_equiv_pos_as_xyz") /= 0 .or. index(line, "_space_group_symop_operation_xyz") /= 0) then
                 ! Iterate over the symops
                 do
                     ! Read current line and check for errors
