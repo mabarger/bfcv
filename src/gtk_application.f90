@@ -26,7 +26,7 @@ module gtk_application
     logical :: has_file = .false.
 
     ! Current crystal
-    character(:), allocatable :: crystal_name
+    character(:), allocatable :: crystal_name, systematic_name
     type(atom), allocatable :: atom_list(:)
     real(kind=8) :: crystal_a = 0.0, crystal_b = 0.0, crystal_c = 0.0
 
@@ -150,8 +150,12 @@ contains
             return
         endif
 
-        ! Display current atom name
-        call cairo_show_text(cairo_ctx, crystal_name//c_null_char)
+        ! Display current atom name (with the systematic name in parenthesis if it was in the file)
+        if (len_trim(systematic_name) > 0) then
+            call cairo_show_text(cairo_ctx, trim(crystal_name) // " (" // trim(systematic_name) // ")" // c_null_char)
+        else
+            call cairo_show_text(cairo_ctx, crystal_name // c_null_char)
+        endif
  
         ! Draw atoms
         do i = 1, size(atom_list)
@@ -198,7 +202,6 @@ contains
         integer(c_int) :: ret_val
         character(len=256), dimension(:), allocatable :: selected
         character(len=256) :: file_name
-        character, allocatable :: file_name2(:)
         type(atom), allocatable :: new_list(:)
 
         ! Ask for file
@@ -219,19 +222,20 @@ contains
         has_file = .true.
         write(*, "(AA)") "[~] Opening file ", file_name
         crystal_name = cif_extract_name(file_name)
+        systematic_name = cif_extract_field(file_name, "_chemical_name_systematic")
         crystal_a = cif_extract_field_real(file_name, "_cell_length_a")
         crystal_b = cif_extract_field_real(file_name, "_cell_length_b")
         crystal_c = cif_extract_field_real(file_name, "_cell_length_c")
-        print *, crystal_a, crystal_b, crystal_c
         atom_list = cif_extract_atoms(file_name)
-        call print_atoms(atom_list)
 
         ! Apply the symmetry operations to the atoms
         call cif_apply_symops(file_name, atom_list, new_list)
         deallocate(atom_list)
         atom_list = new_list
-        call print_atoms(atom_list)
         atom_list = remove_duplicate_atoms(atom_list)
+
+        ! Mirror atoms
+        atom_list = cif_mirror_atoms(atom_list)
         call print_atoms(atom_list)
 
         ! Queue refresh

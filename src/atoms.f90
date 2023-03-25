@@ -143,7 +143,6 @@ contains
         end do
 
         ! Deallocate memory and swap result back
-        print *, j
         array(:) = result_array(:j)
         deallocate(result_array)
         allocate(result_array(j))

@@ -10,9 +10,11 @@ module cif
     public cif_extract_field
     public cif_extract_field_real
     public cif_apply_symops
+    public cif_mirror_atoms
 
     ! Module variables
     character(*), parameter :: field_placeholder = "[!] Field not found in file"
+    real, parameter :: eps = 0.0001
 
 contains
     ! Extracts the information of all atoms in the file and returns them as an array
@@ -126,7 +128,7 @@ contains
 
             ! Check for the field name
             if (index(line, field_name) /= 0) then
-                tokens = split_string(trim(line), ' ')
+                tokens = split_string_escaped(trim(line), ' ')
                 if (len(tokens(2)) < 2) then
                     print *, "[!] Field " // field_name // " not in file"
                 endif
@@ -392,5 +394,64 @@ contains
         enddo
 
         idx = high
+    end subroutine
+
+    ! Mirrors atoms at the edge of the unit cell and returns the new list of atoms in new_list
+    function cif_mirror_atoms(atom_list) result(new_list)
+        type(atom), allocatable, intent(inout) :: atom_list(:)
+        type(atom), allocatable :: new_list(:)
+        integer :: i = 0, atom_idx = 1
+
+        ! Speculatively allocate as much memory as needed at maximum
+        ! Note: The mirroring is done by applying a transformation matrix to all atoms and then
+        ! filtering out duplicates afterward and trimming the list (See cif_mirror_atom)
+        allocate(new_list(size(atom_list) * 128))
+        new_list(:)%x = 0
+        new_list(:)%y = 0
+        new_list(:)%z = 0
+        new_list(:)%name = "N/A"
+
+        ! Iterate over existing atoms
+        do i = 1, size(atom_list)
+			! Mirror the single atom
+			call cif_mirror_atom(atom_list(i), new_list, atom_idx)
+        enddo
+
+        ! Free old list and reallocate appropriate memory for the new list
+        deallocate(atom_list)
+    end function
+
+    ! Helper subroutine, which performs the mirror operation on a single atom and places the resulting atoms in the atom_list
+    subroutine cif_mirror_atom(curr_atom, atom_list, atom_idx)
+        type(atom), intent(in) :: curr_atom
+        type(atom), dimension(:), intent(out) :: atom_list
+        integer, intent(inout) :: atom_idx
+
+        integer :: i = 0, j = 0, k = 0
+
+        ! Triple loop to account for mirroring in all three dimensions (e.g. if x/y/z is 0/0/0 then it should be mirrored to all corners)
+        ! Basically this works like a transformation matrix that is applied to the atoms in the list
+        do i = -1, 1
+            do j = -1, 1
+                do k = -1, 1
+                    ! Mirror atom
+                    atom_list(atom_idx)%x = curr_atom%x + i
+                    atom_list(atom_idx)%y = curr_atom%y + j
+                    atom_list(atom_idx)%z = curr_atom%z + k
+                    atom_list(atom_idx)%name = curr_atom%name
+
+                    ! Normalize positions if applicable
+                    if (atom_list(atom_idx)%x > (1.0 + eps)) atom_list(atom_idx)%x = atom_list(atom_idx)%x - 1
+                    if (atom_list(atom_idx)%y > (1.0 + eps)) atom_list(atom_idx)%y = atom_list(atom_idx)%y - 1
+                    if (atom_list(atom_idx)%z > (1.0 + eps)) atom_list(atom_idx)%z = atom_list(atom_idx)%z - 1
+                    if (atom_list(atom_idx)%x < (0.0 - eps)) atom_list(atom_idx)%x = atom_list(atom_idx)%x + 1
+                    if (atom_list(atom_idx)%y < (0.0 - eps)) atom_list(atom_idx)%y = atom_list(atom_idx)%y + 1
+                    if (atom_list(atom_idx)%z < (0.0 - eps)) atom_list(atom_idx)%z = atom_list(atom_idx)%z + 1
+
+                    ! Advance index
+                    atom_idx = atom_idx + 1
+                end do
+            end do
+        end do
     end subroutine
 end module cif
