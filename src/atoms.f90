@@ -102,6 +102,97 @@ module atoms
         "Rn"  &! Radon
     /)
 
+    ! Most common oxidation states for each element
+    integer, dimension(87), parameter :: element_ox_states = [ &
+        1, &
+        0, &
+        1, &
+        2, &
+        3, &
+        4, &
+        5, &
+        -2, &
+        -1, &
+        0, &
+        1, &
+        2, &
+        3, &
+        -4, &
+        -3, &
+        -2, &
+        -1, &
+        0, &
+        1, &
+        2, &
+        3, &
+        4, &
+        5, &
+        6, &
+        7, &
+        3, &
+        3, &
+        2, &
+        2, &
+        2, &
+        3, &
+        -4, &
+        -3, &
+        -2, &
+        -1, &
+        2, &
+        1, &
+        2, &
+        3, &
+        4, &
+        5, &
+        4, &
+        4, &
+        3, &
+        3, &
+        3, &
+        2, &
+        1, &
+        2, &
+        3, &
+        4, &
+        -3, &
+        -2, &
+        2, &
+        1, &
+        2, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        3, &
+        4, &
+        5, &
+        4, &
+        4, &
+        4, &
+        4, &
+        4, &
+        3, &
+        2, &
+        1, &
+        2, &
+        3, &
+        -2, &
+        -1, &
+        0, &
+        0 & ! Fallthrough for invalid elements
+    ]
+
     ! Mass of the elements in normalized atomic mass units
     real(kind=8), dimension(87), parameter :: element_mass = [ &
         1.00794d0, &
@@ -281,8 +372,8 @@ module atoms
         color(0.780, 0.054, 0.368), &
         color(0.917, 0.560, 0.125), &
         color(0.031, 0.733, 0.611), &
-        color(0.800, 0.819, 0.733) &
-        ]
+        color(0.800, 0.819, 0.733)  &
+    ]
 
 contains
     ! Prints the contents of an atom nicely
@@ -370,6 +461,15 @@ contains
         enddo
     end subroutine
 
+    ! Computes the distance between two atoms in a normalized unit cell
+    function atom_distance(atom1, atom2) result(distance)
+        type(atom), intent(in) :: atom1, atom2
+        real(kind=8) :: distance
+
+        distance = sqrt((atom1%x - atom2%x)**2 + (atom1%y - atom2%y)**2 + (atom1%z - atom2%z)**2)
+    end function
+
+    ! Computes the total molecular mass in g/mol
     function compute_total_molecular_mass(atoms_in) result(molecular_mass)
         type(atom), intent(inout) :: atoms_in(:)
         real(kind=8) :: molecular_mass
@@ -381,6 +481,28 @@ contains
         do i = 1, size(atoms_in)
             ! Add the mass of the atom
             molecular_mass = molecular_mass + element_mass(atoms_in(i)%id)
+        enddo
+    end function
+
+    ! Computes the ionic binding energy by assuming the most common oxidation state for each element
+    function compute_ionic_binding_energy(atoms_in) result(binding_energy)
+        type(atom), intent(inout) :: atoms_in(:)
+        real(kind=8) :: binding_energy, distance, curr_energy
+        integer :: i, j
+
+        binding_energy = 0.0
+
+        ! Loop over atoms
+        do i = 1, size(atoms_in)
+            ! Loop over all other atoms to get unique pairs
+            do j = i+1, size(atoms_in)
+                ! Compute distance
+                distance = atom_distance(atoms_in(i), atoms_in(j))
+
+                ! Compute ionic binding energy with the formula (Q1 * Q2) / distance
+                curr_energy = (element_ox_states(atoms_in(i)%id) * element_ox_states(atoms_in(j)%id)) / distance
+                binding_energy = binding_energy + curr_energy
+            enddo
         enddo
     end function
 end module atoms

@@ -29,7 +29,7 @@ module gtk_application
     character(:), allocatable :: crystal_name
     type(atom), allocatable :: atom_list(:)
     real :: crystal_alpha = 0.0, crystal_beta = 0.0, crystal_gamma = 0.0
-    real :: molecular_mass = 0.0
+    real :: molecular_mass = 0.0, binding_energy = 0.0
 
 contains
     ! Initializes the application
@@ -251,7 +251,9 @@ contains
 
         ! Compute interesting statistics
         molecular_mass = compute_total_molecular_mass(atom_list)
+        binding_energy = compute_ionic_binding_energy(atom_list)
         print *, "Molecular mass: ", molecular_mass, "g/mol"
+        print *, "Ionic binding energy: ", binding_energy
 
         ! Queue refresh
         call gtk_widget_queue_draw(canvas)
