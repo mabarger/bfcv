@@ -13,6 +13,7 @@ module cif
     public cif_apply_symops
     public cif_mirror_atoms
     public cif_remove_duplicates_mirror_safe
+    public  cif_normalize_atom_list_positions
 
     ! Module variables
     character(*), parameter :: field_placeholder = "[!] Field not found or malformed in file"
@@ -515,9 +516,9 @@ contains
         do i = 2, n
             is_unique = .true.
             do j = 1, atom_idx
-                if (abs(atom_list(i)%x) == abs(new_list(j)%x) .and. &
-                    abs(atom_list(i)%y) == abs(new_list(j)%y) .and. &
-                    abs(atom_list(i)%z) == abs(new_list(j)%z)) then
+                if (abs(atom_list(i)%x - new_list(j)%x) < eps .and. &
+                    abs(atom_list(i)%y - new_list(j)%y) < eps .and. &
+                    abs(atom_list(i)%z - new_list(j)%z) < eps) then
 
                     ! A matching atom has been found, therefore not unique
                     is_unique = .false.
@@ -540,7 +541,7 @@ contains
     end subroutine
 
     ! Normalizes the positions of atoms to fit within a unit cell
-    subroutine cif_normalize_atom_list_position(atom_list)
+    subroutine cif_normalize_atom_list_positions(atom_list)
         type(atom), allocatable, dimension(:), intent(inout) :: atom_list
         integer :: atom_idx
 

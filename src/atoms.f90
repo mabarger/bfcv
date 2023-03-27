@@ -285,6 +285,97 @@ module atoms
         0 & ! Fallthrough for invalid elements
     ]
 
+    ! Covalent radii of the elements
+    real(kind=8), dimension(87), parameter :: element_radius_cov = [ &
+        32, &
+        46, &
+        133, &
+        102, &
+        85, &
+        75, &
+        71, &
+        63, &
+        64, &
+        67, &
+        155, &
+        139, &
+        126, &
+        116, &
+        111, &
+        103, &
+        99, &
+        96, &
+        196, &
+        171, &
+        148, &
+        136, &
+        134, &
+        122, &
+        119, &
+        116, &
+        111, &
+        110, &
+        112, &
+        118, &
+        124, &
+        121, &
+        121, &
+        116, &
+        114, &
+        117, &
+        210, &
+        185, &
+        163, &
+        154, &
+        147, &
+        138, &
+        128, &
+        125, &
+        125, &
+        120, &
+        128, &
+        136, &
+        142, &
+        140, &
+        140, &
+        136, &
+        133, &
+        131, &
+        232, &
+        196, &
+        180, &
+        163, &
+        176, &
+        174, &
+        173, &
+        172, &
+        168, &
+        169, &
+        168, &
+        167, &
+        166, &
+        165, &
+        164, &
+        170, &
+        162, &
+        152, &
+        146, &
+        137, &
+        131, &
+        129, &
+        122, &
+        123, &
+        124, &
+        133, &
+        144, &
+        144, &
+        151, &
+        145, &
+        147, &
+        142, &
+        0 & ! Fallthrough for invalid elements
+    ]
+
     ! Mass of the elements in normalized atomic mass units
     real(kind=8), dimension(87), parameter :: element_mass = [ &
         1.00794d0, &
@@ -637,4 +728,31 @@ contains
             enddo
         enddo
     end function
+
+    ! Copmutes possible bonds between atoms based on their covalent radii
+    subroutine compute_bonds(atoms_in)
+        type(atom), intent(in) :: atoms_in(:)
+        real(kind=8) :: distance = 0.0, total_cov_radius = 0.0
+        integer :: i, j
+
+        ! Loop over atoms
+        do i = 1, size(atoms_in)
+            ! Loop over all other atoms to get unique pairs
+            do j = i+1, size(atoms_in)
+                ! Compute distance
+                distance = atom_distance(atoms_in(i), atoms_in(j))
+
+                ! Compute total covalent bond radius and convert it from nm to pm
+                total_cov_radius = (element_radius_cov(atoms_in(i)%id) + element_radius_cov(atoms_in(j)%id)) / 1000
+
+                ! Check whether a bond is possible by checking the distance between the atoms
+                if (total_cov_radius > distance) then
+                    print *, "Possible bond between"
+                    call print_atom(atoms_in(i))
+                    call print_atom(atoms_in(j))
+                    print *, ""
+                endif
+            enddo
+        enddo
+    end subroutine
 end module atoms

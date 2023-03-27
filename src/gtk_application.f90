@@ -238,6 +238,9 @@ contains
         call cif_apply_symops(file_name, atom_list, new_list)
         deallocate(atom_list)
         atom_list = new_list
+
+        ! Sanitize the atom list
+        call cif_normalize_atom_list_positions(atom_list)
         call cif_remove_duplicates_mirror_safe(atom_list)
 
         ! Mirror atoms
@@ -256,6 +259,9 @@ contains
         binding_energy = compute_ionic_binding_energy(atom_list)
         print *, "Molecular mass: ", molecular_mass, "g/mol"
         print *, "Ionic binding energy: ", binding_energy
+
+        call print_atoms(atom_list)
+        call compute_bonds(atom_list)
 
         ! Queue refresh
         call gtk_widget_queue_draw(canvas)
