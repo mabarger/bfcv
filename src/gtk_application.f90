@@ -182,7 +182,9 @@ contains
         ! Compute position of atom relative to the frame
         x_pos = frame_x + 50 + curr_atom%x * (frame_w - 100)
         y_pos = frame_y + 50 + curr_atom%y * (frame_h - 100)
-        radius = 20 * curr_atom%z
+
+        ! Displayed size depends on the distance to the viewpoint and the radius
+        radius = 30 * curr_atom%z * (element_radius(curr_atom%id) / element_radius_max)
 
         ! Draw atom
         call cairo_arc(cairo_ctx, x_pos, y_pos, radius, 0d0, 2 * 3.14159d0)
