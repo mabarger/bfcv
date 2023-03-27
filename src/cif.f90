@@ -9,14 +9,14 @@ module cif
     public cif_extract_name
     public cif_extract_field
     public cif_extract_field_real
+    public cif_convert_coordinates
     public cif_apply_symops
     public cif_mirror_atoms
     public cif_remove_duplicates_mirror_safe
 
     ! Module variables
-    character(*), parameter :: field_placeholder = "[!] Field not found in file"
-    !real, parameter :: eps = 0.0001
-    integer, parameter :: matrix_transf_scale = 64
+    character(*), parameter :: field_placeholder = "[!] Field not found or malformed in file"
+    integer, parameter :: matrix_transf_scale = 27
 
 contains
     ! Extracts the information of all atoms in the file and returns them as an array
@@ -236,7 +236,7 @@ contains
 
         ! Allocate memory for the new atom list
         allocate(new_list(n_symops * size(atom_list)))
-        new_list(:)%name = "N/A"
+        new_list(:)%name = ""
         new_list(:)%x = 0
         new_list(:)%y = 0
         new_list(:)%z = 0
@@ -362,6 +362,39 @@ contains
         endif
     end subroutine
 
+    ! Converts the coordinates from the given system to a right-angle system with equal lengths for all axises
+    ! a, b, c =  axis lengths
+    subroutine cif_convert_coordinates(atom_list, alpha, beta, gamma)
+        type(atom), allocatable, dimension(:), intent(inout) :: atom_list
+        real, intent(in) :: alpha, beta, gamma
+        integer :: i
+        real :: x_new, y_new, z_new
+
+        ! Rotation matrices
+        real :: Rx(3,3), Ry(3,3), Rz(3,3)
+        
+        ! Compute rotation matrices
+        Rx = reshape([1., 0., 0., 0., cos(alpha), -sin(alpha), 0., sin(alpha), cos(alpha)], [3,3])
+        Ry = reshape([cos(beta), 0., sin(beta), 0., 1., 0., -sin(beta), 0., cos(beta)], [3,3])
+        Rz = reshape([cos(gamma), -sin(gamma), 0., sin(gamma), cos(gamma), 0., 0., 0., 1.], [3,3])
+
+        ! Iterate over atoms
+        do i = 1, size(atom_list)
+            ! Compute new coordinates with rotation matrices and add them to list
+            x_new = atom_list(i)%x * Rz(1,1) * Ry(1,1) * Rx(1,1) + &
+                atom_list(i)%y * Rz(1,2) * Ry(1,2) * Rx(1,2) + atom_list(i)%z * Rz(1,3) * Ry(1,3) * Rx(1,3)
+            y_new = atom_list(i)%x * Rz(2,1) * Ry(2,1) * Rx(2,1) + &
+                atom_list(i)%y * Rz(2,2) * Ry(2,2) * Rx(2,2) + atom_list(i)%z * Rz(2,3) * Ry(2,3) * Rx(2,3)
+            z_new = atom_list(i)%x * Rz(3,1) * Ry(3,1) * Rx(3,1) + &
+                atom_list(i)%y * Rz(3,2) * Ry(3,2) * Rx(3,2) + atom_list(i)%z * Rz(3,3) * Ry(3,3) * Rx(3,3)
+
+            ! Scaling is implicitly done when visualizing the atoms, so it is not needed to do it here
+            atom_list(i)%x = x_new
+            atom_list(i)%y = y_new
+            atom_list(i)%z = z_new
+        enddo
+    end subroutine
+
     ! Gets the next token with the highest priority from the symop
     subroutine cif_symop_get_next(symop, idx)
         character(256), intent(inout) :: symop
@@ -412,7 +445,7 @@ contains
         new_list(:)%x = 0
         new_list(:)%y = 0
         new_list(:)%z = 0
-        new_list(:)%name = "N/A"
+        new_list(:)%name = ""
 
         ! Iterate over existing atoms
         atom_idx = 1
@@ -452,12 +485,7 @@ contains
                     atom_list(atom_idx)%name = curr_atom%name
 
                     ! Normalize positions if applicable
-                    if (atom_list(atom_idx)%x > (1.0 + eps)) atom_list(atom_idx)%x = atom_list(atom_idx)%x - 1.0d0
-                    if (atom_list(atom_idx)%y > (1.0 + eps)) atom_list(atom_idx)%y = atom_list(atom_idx)%y - 1.0d0
-                    if (atom_list(atom_idx)%z > (1.0 + eps)) atom_list(atom_idx)%z = atom_list(atom_idx)%z - 1.0d0
-                    if (atom_list(atom_idx)%x < (0.0 - eps)) atom_list(atom_idx)%x = atom_list(atom_idx)%x + 1.0d0
-                    if (atom_list(atom_idx)%y < (0.0 - eps)) atom_list(atom_idx)%y = atom_list(atom_idx)%y + 1.0d0
-                    if (atom_list(atom_idx)%z < (0.0 - eps)) atom_list(atom_idx)%z = atom_list(atom_idx)%z + 1.0d0
+                    call cif_normalize_atom_position(atom_list(atom_idx))
 
                     ! Advance index
                     atom_idx = atom_idx + 1
@@ -479,7 +507,7 @@ contains
         new_list(:)%x = 0
         new_list(:)%y = 0
         new_list(:)%z = 0
-        new_list(:)%name = "N/A"
+        new_list(:)%name = ""
         new_list(1) = atom_list(1)
 
         ! Iterate over old array
@@ -509,5 +537,29 @@ contains
         allocate(atom_list(atom_idx))
         atom_list(:) = new_list(:atom_idx)
         deallocate(new_list)
+    end subroutine
+
+    ! Normalizes the positions of atoms to fit within a unit cell
+    subroutine cif_normalize_atom_list_position(atom_list)
+        type(atom), allocatable, dimension(:), intent(inout) :: atom_list
+        integer :: atom_idx
+
+        ! Iterate over the atoms and normalize the coordinates
+        do atom_idx = 1, size(atom_list)
+            call cif_normalize_atom_position(atom_list(atom_idx))
+        enddo
+    end subroutine
+
+    ! Normalizes the position of a single atom to fit within a unit cell
+    subroutine cif_normalize_atom_position(curr_atom)
+        type(atom), intent(inout) :: curr_atom
+
+        ! For each coordinatecheck if we are outside the unit cell and if yes, fold back in
+        if (curr_atom%x > (1.0 + eps)) curr_atom%x = curr_atom%x - 1.0d0
+        if (curr_atom%y > (1.0 + eps)) curr_atom%y = curr_atom%y - 1.0d0
+        if (curr_atom%z > (1.0 + eps)) curr_atom%z = curr_atom%z - 1.0d0
+        if (curr_atom%x < (0.0 - eps)) curr_atom%x = curr_atom%x + 1.0d0
+        if (curr_atom%y < (0.0 - eps)) curr_atom%y = curr_atom%y + 1.0d0
+        if (curr_atom%z < (0.0 - eps)) curr_atom%z = curr_atom%z + 1.0d0
     end subroutine
 end module cif

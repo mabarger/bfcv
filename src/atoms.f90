@@ -260,13 +260,16 @@ contains
 
         n = size(atoms_in)
 
+        ! Loop over all atoms
         do i = 1, n-1
             min_idx = i
+            ! Find a matching spot
             do j = i+1, n
                 if (atoms_in(j)%z < atoms_in(min_idx)%z) then
                 min_idx = j
                 endif
             enddo
+            ! Place the atom in the correct spot
             if (min_idx /= i) then
                 temp = atoms_in(i)
                 atoms_in(i) = atoms_in(min_idx)

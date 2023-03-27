@@ -26,9 +26,9 @@ module gtk_application
     logical :: has_file = .false.
 
     ! Current crystal
-    character(:), allocatable :: crystal_name, systematic_name
+    character(:), allocatable :: crystal_name
     type(atom), allocatable :: atom_list(:)
-    real(kind=8) :: crystal_a = 0.0, crystal_b = 0.0, crystal_c = 0.0
+    real :: crystal_alpha = 0.0, crystal_beta = 0.0, crystal_gamma = 0.0
 
 contains
     ! Initializes the application
@@ -150,12 +150,8 @@ contains
             return
         endif
 
-        ! Display current atom name (with the systematic name in parenthesis if it was in the file)
-        if (len_trim(systematic_name) > 0 .and. len_trim(systematic_name) /= 256) then
-            call cairo_show_text(cairo_ctx, trim(crystal_name) // " (" // trim(systematic_name) // ")" // c_null_char)
-        else
-            call cairo_show_text(cairo_ctx, crystal_name // c_null_char)
-        endif
+        ! Display current atom name
+        call cairo_show_text(cairo_ctx, crystal_name // c_null_char)
  
         ! Draw atoms
         do i = 1, size(atom_list)
@@ -225,18 +221,21 @@ contains
         has_file = .true.
         write(*, "(AA)") "[~] Opening file ", file_name
         crystal_name = cif_extract_name(file_name)
-        systematic_name = cif_extract_field(file_name, "_chemical_name_systematic")
-        crystal_a = cif_extract_field_real(file_name, "_cell_length_a")
-        crystal_b = cif_extract_field_real(file_name, "_cell_length_b")
-        crystal_c = cif_extract_field_real(file_name, "_cell_length_c")
+        crystal_alpha = cif_extract_field_real(file_name, "_cell_angle_alpha")
+        crystal_beta =  cif_extract_field_real(file_name, "_cell_angle_beta")
+        crystal_gamma = cif_extract_field_real(file_name, "_cell_angle_gamma")
         atom_list = cif_extract_atoms(file_name)
+
+        ! Check if we need to convert the coordinate system to a 90/90/90 degree system
+        if (crystal_alpha /= 90.0 .or. crystal_beta /= 90.0 .or. crystal_gamma /= 90.0) then
+            call cif_convert_coordinates(atom_list, crystal_alpha, crystal_beta, crystal_gamma)
+        endif
 
         ! Apply the symmetry operations to the atoms
         call cif_apply_symops(file_name, atom_list, new_list)
         deallocate(atom_list)
         atom_list = new_list
         call cif_remove_duplicates_mirror_safe(atom_list)
-        call print_atoms(atom_list)
 
         ! Mirror atoms
         new_list = cif_mirror_atoms(atom_list)
@@ -251,7 +250,6 @@ contains
 
         ! Queue refresh
         call gtk_widget_queue_draw(canvas)
-        call print_atoms(atom_list)
     end subroutine
 
 end module gtk_application
