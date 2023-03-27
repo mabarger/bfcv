@@ -29,6 +29,7 @@ module gtk_application
     character(:), allocatable :: crystal_name
     type(atom), allocatable :: atom_list(:)
     real :: crystal_alpha = 0.0, crystal_beta = 0.0, crystal_gamma = 0.0
+    real :: molecular_mass = 0.0
 
 contains
     ! Initializes the application
@@ -247,6 +248,10 @@ contains
 
         ! Sort atoms by z-coordinate so we can print in a 3d fashion
         call sort_atoms_by_z(atom_list)
+
+        ! Compute interesting statistics
+        molecular_mass = compute_total_molecular_mass(atom_list)
+        print *, "Molecular mass: ", molecular_mass, "g/mol"
 
         ! Queue refresh
         call gtk_widget_queue_draw(canvas)

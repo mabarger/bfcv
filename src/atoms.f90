@@ -101,6 +101,98 @@ module atoms
         "At", &! Astatine
         "Rn"  &! Radon
     /)
+
+    ! Mass of the elements in normalized atomic mass units
+    real(kind=8), dimension(87), parameter :: element_mass = [ &
+        1.00794d0, &
+        4.002602d0, &
+        6.938d0, &
+        9.012183d0, &
+        10.81d0, &
+        12.011d0, &
+        14.007d0, &
+        15.999d0, &
+        18.998d0, &
+        20.180d0, &
+        22.990d0, &
+        24.305d0, &
+        26.982d0, &
+        28.086d0, &
+        30.974d0, &
+        32.066d0, &
+        35.45d0, &
+        39.948d0, &
+        39.098d0, &
+        40.078d0, &
+        44.956d0, &
+        47.867d0, &
+        50.942d0, &
+        51.996d0, &
+        54.938d0, &
+        55.845d0, &
+        58.933d0, &
+        58.693d0, &
+        63.546d0, &
+        65.380d0, &
+        69.723d0, &
+        72.630d0, &
+        74.922d0, &
+        78.960d0, &
+        79.904d0, &
+        83.798d0, &
+        85.468d0, &
+        87.620d0, &
+        88.906d0, &
+        91.224d0, &
+        92.906d0, &
+        95.940d0, &
+        98.000d0, &
+        101.070d0, &
+        102.905d0, &
+        106.420d0, &
+        107.868d0, &
+        112.410d0, &
+        114.820d0, &
+        118.710d0, &
+        121.760d0, &
+        127.600d0, &
+        126.905d0, &
+        131.293d0, &
+        132.905d0, &
+        137.327d0, &
+        138.905d0, &
+        140.116d0, &
+        140.908d0, &
+        144.242d0, &
+        145.000d0, &
+        150.360d0, &
+        151.964d0, &
+        157.250d0, &
+        158.925d0, &
+        162.500d0, &
+        164.930d0, &
+        167.259d0, &
+        168.934d0, &
+        173.054d0, &
+        174.967d0, &
+        178.490d0, &
+        180.948d0, &
+        183.840d0, &
+        186.207d0, &
+        190.230d0, &
+        192.217d0, &
+        195.084d0, &
+        196.568d0, &
+        200.27d0, &
+        204.01d0, &
+        207.20d0, &
+        208.980374d0, &
+        209.983126d0, &
+        210.987481d0, &
+        222.017577d0, &
+        0.0d0 & ! In case no atom matches, a default value
+    ]
+
     ! Note that only the first 20-ish atoms have well defined colors in literature
     type(color), dimension(86), parameter :: element_colors = [ &
         color(1.000, 1.000, 1.000), &
@@ -277,4 +369,18 @@ contains
             endif
         enddo
     end subroutine
+
+    function compute_total_molecular_mass(atoms_in) result(molecular_mass)
+        type(atom), intent(inout) :: atoms_in(:)
+        real(kind=8) :: molecular_mass
+        integer :: i
+
+        molecular_mass = 0.0
+
+        ! Loop over atoms
+        do i = 1, size(atoms_in)
+            ! Add the mass of the atom
+            molecular_mass = molecular_mass + element_mass(atoms_in(i)%id)
+        enddo
+    end function
 end module atoms
