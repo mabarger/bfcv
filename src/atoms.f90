@@ -469,8 +469,8 @@ module atoms
 
     ! Note that only the first 20-ish atoms have well defined colors in literature
     type(color), dimension(86), parameter :: element_colors = [ &
-        ! Hydrogen: white
-        color(1.000, 1.000, 1.000), &
+        ! Hydrogen: white-blue
+        color(0.850, 0.850, 1.000), &
 
         ! Helium: gray
         color(0.753, 0.753, 0.753), &

@@ -23,7 +23,7 @@ module gtk_application
     type(c_ptr) :: canvas = c_null_ptr
     integer(c_int) :: status = 0
     character(len=16), dimension(1) :: filters = ["*.cif"], filter_names = ["CIF files"]
-    logical :: has_file = .false.
+    logical :: has_file = .false., labels = .true.
 
     ! Current crystal
     character(:), allocatable :: crystal_name
@@ -51,11 +51,13 @@ contains
     end subroutine
 
     ! Initializes the window and its contents
+    ! app, gdata are required arguments that are unused
     subroutine window_activate(app, gdata) bind(c)
         type(c_ptr), value, intent(in) :: app, gdata
         type(c_ptr) :: section = c_null_ptr
         type(c_ptr) :: menu = c_null_ptr, menu_item_open = c_null_ptr, menu_item_quit = c_null_ptr
-        type(c_ptr) :: act_quit = c_null_ptr, act_open = c_null_ptr
+        type(c_ptr) :: menu_item_toggle_labels = c_null_ptr
+        type(c_ptr) :: act_quit = c_null_ptr, act_open = c_null_ptr, act_toggle_labels = c_null_ptr
 
         ! Create the window
         window = gtk_application_window_new(app)
@@ -68,17 +70,24 @@ contains
         section = g_menu_new()
         menu_item_open = g_menu_item_new("Open File"//c_null_char, "app.open_file"//c_null_char)
         menu_item_quit = g_menu_item_new("Quit"//c_null_char, "app.quit"//c_null_char)
+        menu_item_toggle_labels = g_menu_item_new("Toggle Labels"//c_null_char, "app.toggle_labels"//c_null_char)
 
         ! Specify button actions
         act_quit = g_simple_action_new("quit"//c_null_char, c_null_ptr)
         call g_signal_connect(act_quit, "activate"//c_null_char, c_funloc(quit), gtk_app)
         call g_action_map_add_action(gtk_app, act_quit)
+
+        act_toggle_labels = g_simple_action_new("toggle_labels"//c_null_char, c_null_ptr)
+        call g_signal_connect(act_toggle_labels, "activate"//c_null_char, c_funloc(toggle_labels), gtk_app)
+        call g_action_map_add_action(gtk_app, act_toggle_labels)
+
         act_open = g_simple_action_new("open_file"//c_null_char, c_null_ptr)
         call g_signal_connect(act_open, "activate"//c_null_char, c_funloc(open_file), gtk_app)
         call g_action_map_add_action(gtk_app, act_open)
 
         ! Add buttons to menu bar
         call g_menu_append_item(section, menu_item_open)
+        call g_menu_append_item(section, menu_item_toggle_labels)
         call g_menu_append_item(section, menu_item_quit)
         call g_menu_append_section(menu, "💮💮 @-->--->--- 💮💮"//c_null_char, section)
         call g_menu_append_submenu(menu_bar, "Menu"//c_null_char, menu)
@@ -104,6 +113,7 @@ contains
     end subroutine
 
     ! Called when the canvas is updated, displays the crystal structure if a file is loaded
+    ! widget is a required argument that is unused, cairo_ctx is the drawing context handle
     subroutine display_crystal(widget, cairo_ctx, width, height, gdata) bind(c)
         use, intrinsic :: iso_fortran_env, only: wp=>real64
         type(c_ptr), value, intent(in) :: widget, cairo_ctx, gdata
@@ -156,17 +166,18 @@ contains
  
         ! Draw atoms
         do i = 1, size(atom_list)
-            if (atom_list(i)%x < 0.0) atom_list(i)%x = atom_list(i)%x + 1
-            if (atom_list(i)%y < 0.0) atom_list(i)%y = atom_list(i)%y + 1
-            if (atom_list(i)%z < 0.0) atom_list(i)%z = atom_list(i)%z + 1
-            if (atom_list(i)%x > 1.0) atom_list(i)%x = atom_list(i)%x - 1
-            if (atom_list(i)%y > 1.0) atom_list(i)%y = atom_list(i)%y - 1
-            if (atom_list(i)%z > 1.0) atom_list(i)%z = atom_list(i)%z - 1
+            !if (atom_list(i)%x < 0.0) atom_list(i)%x = atom_list(i)%x + 1
+            !if (atom_list(i)%y < 0.0) atom_list(i)%y = atom_list(i)%y + 1
+            !if (atom_list(i)%z < 0.0) atom_list(i)%z = atom_list(i)%z + 1
+            !if (atom_list(i)%x > 1.0) atom_list(i)%x = atom_list(i)%x - 1
+            !if (atom_list(i)%y > 1.0) atom_list(i)%y = atom_list(i)%y - 1
+            !if (atom_list(i)%z > 1.0) atom_list(i)%z = atom_list(i)%z - 1
             call draw_atom(cairo_ctx, atom_list(i), frame_x, frame_y, frame_w, frame_h)
         enddo
     end subroutine
 
     ! Draws a single atom into the display frame
+    ! cairo_ctx is the drawing context handle
     subroutine draw_atom(cairo_ctx, curr_atom, frame_x, frame_y, frame_w, frame_h)
         type(c_ptr), value, intent(in) :: cairo_ctx
         real(kind=8), intent(in) :: frame_x, frame_y, frame_w, frame_h
@@ -184,20 +195,31 @@ contains
         y_pos = frame_y + 50 + curr_atom%y * (frame_h - 100)
 
         ! Displayed size depends on the distance to the viewpoint and the radius
-        radius = 30 * curr_atom%z * (element_radius(curr_atom%id) / element_radius_max)
+        radius = 30 * (curr_atom%z * 0.5 + 0.5) * (element_radius(curr_atom%id) / element_radius_max)
 
         ! Draw atom
         call cairo_arc(cairo_ctx, x_pos, y_pos, radius, 0d0, 2 * 3.14159d0)
         call cairo_fill(cairo_ctx)
+
+        ! Draw atom name if labels are activated
+        if (labels) then
+            call cairo_set_source_rgb(cairo_ctx, 0.1d0, 0.1d0, 0.1d0)
+            call cairo_set_font_size(cairo_ctx, 30d0 * (curr_atom%z * 0.5 + 0.25))
+            call cairo_move_to(cairo_ctx, x_pos, y_pos)
+
+            call cairo_show_text(cairo_ctx, trim(curr_atom%name)//c_null_char)
+        endif
     end subroutine
 
     ! Called when the 'quit' button is pressed, exits the application
+    ! act, param, win are required arguments that are unused
     subroutine quit(act, param, win) bind(c)
         type(c_ptr), value, intent(in) :: act, param, win
         call gtk_deinit_app()
     end subroutine
 
     ! Called when the 'Open' button is pressed, opens a .cif file
+    ! act, param, win are required arguments that are unused
     subroutine open_file(act, param, win) bind(c)
         type(c_ptr), value, intent(in) :: act, param, win
         integer(c_int) :: ret_val
@@ -263,7 +285,19 @@ contains
         call print_atoms(atom_list)
         call compute_bonds(atom_list)
 
-        ! Queue refresh
+        ! Queue refresh of the crystal
+        call gtk_widget_queue_draw(canvas)
+    end subroutine
+
+    ! Toggles the labels for the displayed atoms
+    ! act, param, win are required arguments that are unused
+    subroutine toggle_labels(act, param, win) bind(c)
+        type(c_ptr), value, intent(in) :: act, param, win
+
+        ! Toggle labels
+        labels = .not. labels
+
+        ! Queue refresh of the crystal
         call gtk_widget_queue_draw(canvas)
     end subroutine
 
