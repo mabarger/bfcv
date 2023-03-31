@@ -12,6 +12,8 @@ module atoms
     end type atom
 
     ! Constants and tables
+    real(kind=8), parameter :: angs_to_bohr = 1/0.52917721067
+    real(kind=8), parameter :: hart_to_kcal = 627.5095
     real(kind=8), parameter :: eps = 0.0001
     character(len=2), dimension(86), parameter :: element_names = (/ &
         "H ", &! Hydrogen
@@ -719,14 +721,17 @@ contains
         do i = 1, size(atoms_in)
             ! Loop over all other atoms to get unique pairs
             do j = i+1, size(atoms_in)
-                ! Compute distance
-                distance = atom_distance(atoms_in(i), atoms_in(j))
+                ! Compute distance and convert it to bohr
+                distance = atom_distance(atoms_in(i), atoms_in(j)) * angs_to_bohr
 
                 ! Compute ionic binding energy with the formula (Q1 * Q2) / distance
                 curr_energy = (element_ox_states(atoms_in(i)%id) * element_ox_states(atoms_in(j)%id)) / distance
                 binding_energy = binding_energy + curr_energy
             enddo
         enddo
+
+        ! Convert Hartree to kcal/mol
+        binding_energy = binding_energy * hart_to_kcal
     end function
 
     ! Copmutes possible bonds between atoms based on their covalent radii

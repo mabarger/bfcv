@@ -29,6 +29,7 @@ $(APPNAME): $(OBJ)
 
 # Building rule for .o files and its .c/.cpp in combination with all .h
 $(OBJDIR)/%.o: $(SRCDIR)/%$(EXT)
+	mkdir -p $(OBJDIR) 2> /dev/null
 	$(CC) $(CCFLAGS) -o $@ -c $< $(LDFLAGS)
 
 # Cleans complete project

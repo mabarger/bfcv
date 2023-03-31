@@ -29,7 +29,10 @@ module gtk_application
     character(:), allocatable :: crystal_name
     type(atom), allocatable :: atom_list(:)
     real :: crystal_alpha = 0.0, crystal_beta = 0.0, crystal_gamma = 0.0
-    real :: molecular_mass = 0.0, binding_energy = 0.0
+    real :: crystal_a = 0.0, crystal_b = 0.0, crystal_c = 0.0, crystal_volume = 0.0
+
+    ! Info strings
+    character(256) :: info_mw, info_be, info_di, info_an, info_cv
 
 contains
     ! Initializes the application
@@ -94,6 +97,8 @@ contains
 
         ! Deallocate used memory
         call g_object_unref(menu_item_open)
+        call g_object_unref(menu_item_crystal_info)
+        call g_object_unref(menu_item_toggle_labels)
         call g_object_unref(menu_item_quit)
 
         ! Set the menubar and display it
@@ -146,7 +151,6 @@ contains
 
         ! Fill the background of the crystal frame with white
         call cairo_set_source_rgb(cairo_ctx, 1.0d0, 1.0d0, 1.0d0)
-        !call cairo_rectangle(cairo_ctx, frame_x+5, frame_y+5, frame_w-10, frame_h-10)
         call cairo_rectangle(cairo_ctx, frame_x, frame_y, frame_w, frame_h)
         call cairo_fill(cairo_ctx)
 
@@ -166,14 +170,58 @@ contains
  
         ! Draw atoms
         do i = 1, size(atom_list)
-            !if (atom_list(i)%x < 0.0) atom_list(i)%x = atom_list(i)%x + 1
-            !if (atom_list(i)%y < 0.0) atom_list(i)%y = atom_list(i)%y + 1
-            !if (atom_list(i)%z < 0.0) atom_list(i)%z = atom_list(i)%z + 1
-            !if (atom_list(i)%x > 1.0) atom_list(i)%x = atom_list(i)%x - 1
-            !if (atom_list(i)%y > 1.0) atom_list(i)%y = atom_list(i)%y - 1
-            !if (atom_list(i)%z > 1.0) atom_list(i)%z = atom_list(i)%z - 1
             call draw_atom(cairo_ctx, atom_list(i), frame_x, frame_y, frame_w, frame_h)
         enddo
+
+        ! Display crystal information on right side
+        call show_crystal_info(cairo_ctx, frame_x + frame_w + 80, frame_y + 30)
+    end subroutine
+
+    ! Displays the crystal information
+    ! cairo_ctx is the drawing context handle
+    subroutine show_crystal_info(cairo_ctx, x, y)
+        type(c_ptr), value, intent(in) :: cairo_ctx
+        real(kind=8), intent(in) :: x, y
+
+        real(kind=8) :: curr_y = 0.0, curr_val = 0.0
+        character(len=20) :: temp_str
+
+        ! Draw title
+        call cairo_set_source_rgb(cairo_ctx, 0.1d0, 0.1d0, 0.1d0)
+        call cairo_set_font_size(cairo_ctx, 20d0)
+        call cairo_move_to(cairo_ctx, x, y)
+        call cairo_show_text(cairo_ctx, "Crystal Information:"//c_null_char)
+
+        ! Display the information
+        call cairo_set_font_size(cairo_ctx, 15d0)
+        curr_y = y + 25
+
+        ! Display molecular weight
+        call cairo_move_to(cairo_ctx, x, curr_y)
+        call cairo_show_text(cairo_ctx, info_mw // c_null_char)
+        curr_y = curr_y + 30
+
+        ! Display ionic binding energy
+        call cairo_move_to(cairo_ctx, x, curr_y)
+        call cairo_show_text(cairo_ctx, info_be // c_null_char)
+        curr_y = curr_y + 30
+
+        ! Display angles of unit cell
+        call cairo_move_to(cairo_ctx, x, curr_y)
+        call cairo_show_text(cairo_ctx, info_an // c_null_char)
+        curr_y = curr_y + 30
+
+        ! Display axises of unit cell
+        call cairo_move_to(cairo_ctx, x, curr_y)
+        call cairo_show_text(cairo_ctx, info_di // c_null_char)
+        curr_y = curr_y + 30
+
+        ! Display volume of unit cell
+        call cairo_move_to(cairo_ctx, x, curr_y)
+        call cairo_show_text(cairo_ctx, info_cv // c_null_char)
+        curr_y = curr_y + 30
+
+
     end subroutine
 
     ! Draws a single atom into the display frame
@@ -224,7 +272,7 @@ contains
         type(c_ptr), value, intent(in) :: act, param, win
         integer(c_int) :: ret_val
         character(len=256), dimension(:), allocatable :: selected
-        character(len=256) :: file_name
+        character(len=256) :: file_name, temp_str
         type(atom), allocatable :: new_list(:)
 
         ! Ask for file
@@ -238,14 +286,23 @@ contains
         deallocate(selected)
         if (file_name(1:1) /= '/') return
 
-        ! Delete old data if it was allocated
+        ! Delete old data if it was allocated and clear info strings
         if (allocated(atom_list)) deallocate(atom_list)
         if (allocated(crystal_name)) deallocate(crystal_name)
+        info_mw = ""
+        info_be = ""
+        info_an = ""
+        info_di = ""
+        info_cv = ""
 
         ! Open the .cif file and extract the relevant information
         has_file = .true.
         write(*, "(AA)") "[~] Opening file ", file_name
         crystal_name = cif_extract_name(file_name)
+        crystal_a = cif_extract_field_real(file_name, "_cell_length_a")
+        crystal_b =  cif_extract_field_real(file_name, "_cell_length_b")
+        crystal_c = cif_extract_field_real(file_name, "_cell_length_c")
+        crystal_volume = cif_extract_field_real(file_name, "_cell_volume")
         crystal_alpha = cif_extract_field_real(file_name, "_cell_angle_alpha")
         crystal_beta =  cif_extract_field_real(file_name, "_cell_angle_beta")
         crystal_gamma = cif_extract_field_real(file_name, "_cell_angle_gamma")
@@ -276,11 +333,26 @@ contains
         ! Sort atoms by z-coordinate so we can print in a 3d fashion
         call sort_atoms_by_z(atom_list)
 
-        ! Compute interesting statistics
-        molecular_mass = compute_total_molecular_mass(atom_list)
-        binding_energy = compute_ionic_binding_energy(atom_list)
-        print *, "Molecular mass: ", molecular_mass, "g/mol"
-        print *, "Ionic binding energy: ", binding_energy
+        ! Compute interesting statistics and generate info strings
+        temp_str = ""
+        write(temp_str, "(f14.2)") compute_total_molecular_mass(atom_list)
+        info_mw = "- Molecular weight: " // trim(temp_str) // " g/mol"
+
+        temp_str = ""
+        write(temp_str, "(f14.2)") compute_ionic_binding_energy(atom_list)
+        info_be = "- Ionic binding energy: " // trim(temp_str) // " kcal/mol"
+
+        temp_str = ""
+        write(temp_str, "(f14.4, f14.4, f14.4)") crystal_alpha, crystal_beta, crystal_gamma
+        info_an = "- Unit cell angles: " // trim(temp_str) // " (degrees)"
+
+        temp_str = ""
+        write(temp_str, "(f14.4, f14.4, f14.4)") crystal_a, crystal_b, crystal_c
+        info_di = "- Unit cell axis length: " // trim(temp_str) // " (angstroms)"
+
+        temp_str = ""
+        write(temp_str, "(f14.4)") crystal_volume
+        info_cv = "- Crystal volume: " // trim(temp_str) // " (angstroms^3)"
 
         call print_atoms(atom_list)
         call compute_bonds(atom_list)
@@ -300,5 +372,4 @@ contains
         ! Queue refresh of the crystal
         call gtk_widget_queue_draw(canvas)
     end subroutine
-
 end module gtk_application
