@@ -607,6 +607,15 @@ contains
         write(*, "(A,F10.6,F10.6,F10.6)") atom_in%name, atom_in%x, atom_in%y, atom_in%z
     end subroutine
 
+    ! Prints the contents of an atom nicely and returns them as a string
+    function print_atom_string(atom_in)
+        type(atom), intent(in) :: atom_in
+        character(256) :: print_atom_string
+
+        print_atom_string(:) = " "
+        write(print_atom_string, "(A,F10.6,F10.6,F10.6)") atom_in%name, atom_in%x, atom_in%y, atom_in%z
+    end function
+
     ! Prints the atoms in an array neatly
     subroutine print_atoms(atoms_in)
         type(atom), intent(in) :: atoms_in(:)
@@ -734,7 +743,7 @@ contains
         binding_energy = binding_energy * hart_to_kcal
     end function
 
-    ! Copmutes possible bonds between atoms based on their covalent radii
+    ! Computes possible bonds between atoms based on their covalent radii
     subroutine compute_bonds(atoms_in)
         type(atom), intent(in) :: atoms_in(:)
         real(kind=8) :: distance = 0.0, total_cov_radius = 0.0
@@ -749,6 +758,7 @@ contains
 
                 ! Compute total covalent bond radius and convert it from nm to pm
                 total_cov_radius = (element_radius_cov(atoms_in(i)%id) + element_radius_cov(atoms_in(j)%id)) / 1000
+                !print *, "radius: ", total_cov_radius, " | distance: ", distance
 
                 ! Check whether a bond is possible by checking the distance between the atoms
                 if (total_cov_radius > distance) then
@@ -759,5 +769,43 @@ contains
                 endif
             enddo
         enddo
+    end subroutine
+
+    ! Compute possible bonds for an atom specified by an index
+    subroutine compute_bonds_atom(atoms_in, idx, idx_list)
+        type(atom), intent(in) :: atoms_in(:)
+        integer, intent(in) :: idx
+        integer, intent(inout), allocatable :: idx_list(:)
+        real(kind=8) :: distance = 0.0, total_cov_radius = 0.0
+        integer :: i, j = 0
+        integer, allocatable :: temp(:)
+
+        ! Allocate memory for bond indices
+        j = 1
+        allocate(idx_list(size(atoms_in)))
+
+        ! Loop over other atoms
+        do i = 1, size(atoms_in)
+            ! Skip same atom
+            if (i == idx) cycle
+
+            ! Compute distance
+            distance = atom_distance(atoms_in(i), atoms_in(idx))
+
+            ! Compute total covalent bond radius and convert it from nm to pm
+            total_cov_radius = (element_radius_cov(atoms_in(i)%id) + element_radius_cov(atoms_in(idx)%id)) / 1000
+
+            ! Check whether a bond is possible by checking the distance between the atoms and add to list
+            if (total_cov_radius > distance) then
+                idx_list(j) = i
+                j = j + 1
+            endif
+        enddo
+
+        ! Reallocate actual memory
+        allocate(temp(j-1))
+        temp(:) = idx_list(:j-1)
+        deallocate(idx_list)
+        idx_list = temp
     end subroutine
 end module atoms

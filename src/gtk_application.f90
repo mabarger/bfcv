@@ -4,6 +4,8 @@ module gtk_application
     use cairo
     use cif
     use gtk
+    use gtk_draw_hl
+    use gdk
     use gtk_sup
     use gtk_hl_chooser
     use g
@@ -21,15 +23,20 @@ module gtk_application
     type(c_ptr) :: window = c_null_ptr
     type(c_ptr) :: menu_bar = c_null_ptr
     type(c_ptr) :: canvas = c_null_ptr
+    type(c_ptr) :: label = c_null_ptr
     integer(c_int) :: status = 0
     character(len=16), dimension(1) :: filters = ["*.cif"], filter_names = ["CIF files"]
     logical :: has_file = .false., labels = .true.
+    integer(c_int) :: mouse_event = 0_c_int
 
     ! Current crystal
     character(:), allocatable :: crystal_name
     type(atom), allocatable :: atom_list(:)
     real :: crystal_alpha = 0.0, crystal_beta = 0.0, crystal_gamma = 0.0
     real :: crystal_a = 0.0, crystal_b = 0.0, crystal_c = 0.0, crystal_volume = 0.0
+    real(kind=8) :: frame_x, frame_y, frame_w, frame_h
+    integer :: selected_atom = 0
+    integer, allocatable :: bonded_atoms(:)
 
     ! Info strings
     character(256) :: info_mw, info_be, info_di, info_an, info_cv
@@ -97,7 +104,6 @@ contains
 
         ! Deallocate used memory
         call g_object_unref(menu_item_open)
-        call g_object_unref(menu_item_crystal_info)
         call g_object_unref(menu_item_toggle_labels)
         call g_object_unref(menu_item_quit)
 
@@ -106,7 +112,7 @@ contains
         call gtk_application_window_set_show_menubar(window, TRUE)
 
         ! Create drawing area for the crystal display
-        canvas = gtk_drawing_area_new()
+        canvas = hl_gtk_drawing_area_new(button_press_event=c_funloc(check_mouse))
         call gtk_drawing_area_set_content_width(canvas, width_c)
         call gtk_drawing_area_set_content_height(canvas, height_c)
         call gtk_drawing_area_set_draw_func(canvas, c_funloc(display_crystal), c_null_ptr, c_null_ptr)
@@ -126,7 +132,6 @@ contains
         integer :: i
 
         ! Frame data
-        real(kind=8) :: frame_x, frame_y, frame_w, frame_h
         frame_x = 10
         frame_y = 60
         frame_w = width - 20
@@ -170,7 +175,7 @@ contains
  
         ! Draw atoms
         do i = 1, size(atom_list)
-            call draw_atom(cairo_ctx, atom_list(i), frame_x, frame_y, frame_w, frame_h)
+            call draw_atom(cairo_ctx, atom_list(i))
         enddo
 
         ! Display crystal information on right side
@@ -185,6 +190,7 @@ contains
 
         real(kind=8) :: curr_y = 0.0, curr_val = 0.0
         character(len=20) :: temp_str
+        integer :: i = 0
 
         ! Draw title
         call cairo_set_source_rgb(cairo_ctx, 0.1d0, 0.1d0, 0.1d0)
@@ -221,14 +227,43 @@ contains
         call cairo_show_text(cairo_ctx, info_cv // c_null_char)
         curr_y = curr_y + 30
 
+        ! If we have a selected atom then show that information
+        curr_y = curr_y + 30
+        call cairo_set_font_size(cairo_ctx, 20d0)
+        call cairo_move_to(cairo_ctx, x, curr_y)
+        if (selected_atom == 0) then
+            call cairo_show_text(cairo_ctx, "Atom Information - Click on an atom" // c_null_char)
+            return
+        endif
 
+        ! Show information about atom
+        call cairo_show_text(cairo_ctx, "Atom Information:" // c_null_char)
+        call cairo_set_font_size(cairo_ctx, 15d0)
+        curr_y = curr_y + 30
+
+        ! Show atom name & position
+        call cairo_move_to(cairo_ctx, x, curr_y)
+        call cairo_show_text(cairo_ctx, "- Name & Pos: " // trim(print_atom_string(atom_list(selected_atom))) // c_null_char)
+        curr_y = curr_y + 30
+
+        ! Show all possible bonds
+        call cairo_move_to(cairo_ctx, x, curr_y)
+        call cairo_show_text(cairo_ctx, "- Possible Bonds to: " // c_null_char)
+        curr_y = curr_y + 20
+        call cairo_set_font_size(cairo_ctx, 12d0)
+
+        ! Iterate over atoms and print them
+        do i = 1, size(bonded_atoms)
+            call cairo_move_to(cairo_ctx, x, curr_y)
+            call cairo_show_text(cairo_ctx, "  -> " // trim(print_atom_string(atom_list(bonded_atoms(i)))) // c_null_char)
+            curr_y = curr_y + 15
+        enddo
     end subroutine
 
     ! Draws a single atom into the display frame
     ! cairo_ctx is the drawing context handle
-    subroutine draw_atom(cairo_ctx, curr_atom, frame_x, frame_y, frame_w, frame_h)
+    subroutine draw_atom(cairo_ctx, curr_atom)
         type(c_ptr), value, intent(in) :: cairo_ctx
-        real(kind=8), intent(in) :: frame_x, frame_y, frame_w, frame_h
         type(atom), intent(in) :: curr_atom
 
         real(kind=8) :: x_pos = 0, y_pos = 0, z_pos = 0, radius = 0
@@ -289,6 +324,8 @@ contains
         ! Delete old data if it was allocated and clear info strings
         if (allocated(atom_list)) deallocate(atom_list)
         if (allocated(crystal_name)) deallocate(crystal_name)
+        if (allocated(bonded_atoms)) deallocate(bonded_atoms)
+        selected_atom = 0
         info_mw = ""
         info_be = ""
         info_an = ""
@@ -299,10 +336,10 @@ contains
         has_file = .true.
         write(*, "(AA)") "[~] Opening file ", file_name
         crystal_name = cif_extract_name(file_name)
-        crystal_a = cif_extract_field_real(file_name, "_cell_length_a")
-        crystal_b =  cif_extract_field_real(file_name, "_cell_length_b")
-        crystal_c = cif_extract_field_real(file_name, "_cell_length_c")
-        crystal_volume = cif_extract_field_real(file_name, "_cell_volume")
+        crystal_a = cif_extract_field_real(file_name, "_cell_length_a")*10
+        crystal_b =  cif_extract_field_real(file_name, "_cell_length_b")*10
+        crystal_c = cif_extract_field_real(file_name, "_cell_length_c")*10
+        crystal_volume = cif_extract_field_real(file_name, "_cell_volume")*1000
         crystal_alpha = cif_extract_field_real(file_name, "_cell_angle_alpha")
         crystal_beta =  cif_extract_field_real(file_name, "_cell_angle_beta")
         crystal_gamma = cif_extract_field_real(file_name, "_cell_angle_gamma")
@@ -355,7 +392,6 @@ contains
         info_cv = "- Crystal volume: " // trim(temp_str) // " (angstroms^3)"
 
         call print_atoms(atom_list)
-        call compute_bonds(atom_list)
 
         ! Queue refresh of the crystal
         call gtk_widget_queue_draw(canvas)
@@ -371,5 +407,49 @@ contains
 
         ! Queue refresh of the crystal
         call gtk_widget_queue_draw(canvas)
+    end subroutine
+
+    ! Checks whether the pointer is above an atom and if yes displays information
+    ! controller, n_press, gdata are required arguments that are unused
+    subroutine check_mouse(controller, n_press, x, y, gdata) bind(c)
+        type(c_ptr), value, intent(in) :: controller, gdata
+        integer(c_int), value, intent(in) :: n_press
+        real(c_double), value, intent(in) :: x, y
+
+        integer :: i
+        real :: curr_x, curr_y, radius
+        type(atom) :: curr_atom
+
+        ! Check if we have a crystal
+        if (.not. has_file) return
+
+        ! Adjust  & normalize coordinates
+        curr_x = x - 60
+        curr_y = y - 110
+        curr_x = curr_x / (frame_w - 100.0d0)
+        curr_y = curr_y / (frame_h - 100.0d0)
+
+        ! Iterate over atoms and see if we have a match
+        do i = 1, size(atom_list)
+            curr_atom = atom_list(i)
+
+            ! Compute relative radius for comparison
+            radius = (30 * (curr_atom%z * 0.5 + 0.5) * (element_radius(curr_atom%id) / element_radius_max)) / (frame_w - 100.0d0)
+
+            ! Check if our mouse cursor is on top of the atom
+            if (curr_x >= (curr_atom%x - radius) .and. curr_x <= (curr_atom%x + radius) .and. &
+                curr_y >= (curr_atom%y - radius) .and. curr_y <= (curr_atom%y + radius)) then
+                ! Select atom
+                selected_atom = i
+
+                ! Compute possible bonds
+                if (allocated(bonded_atoms)) deallocate(bonded_atoms)
+                call compute_bonds_atom(atom_list, i, bonded_atoms)
+
+                ! Queue refresh
+                call gtk_widget_queue_draw(canvas)
+                exit
+            endif
+        enddo
     end subroutine
 end module gtk_application
