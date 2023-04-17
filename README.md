@@ -6,7 +6,7 @@
 ![Example Program View](example.png)
 
 ## Requirements
-<p align="justify">To compile this program a fortran compiler capable of fortran90 (gfortran) is needed, as well as the installation of [gtk-fortran](https://github.com/vmagnin/gtk-fortran). To run this program you need the gtk4 library.</p>
+To compile this program a fortran compiler capable of fortran90 (gfortran) is needed, as well as the installation of [gtk-fortran](https://github.com/vmagnin/gtk-fortran).
 
 ## Compilation
 <p align="justify">To compile this program please make sure that all the requirements are installed and that your PKG_CONFIG_PATH points to the correct directories as explained in the guide of gtk-fortran. Once this is done simply run make:</p>

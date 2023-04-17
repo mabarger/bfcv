@@ -430,7 +430,7 @@ contains
         curr_y = curr_y / (frame_h - 100.0d0)
 
         ! Iterate over atoms and see if we have a match
-        do i = 1, size(atom_list)
+        do i = size(atom_list), 1, -1
             curr_atom = atom_list(i)
 
             ! Compute relative radius for comparison
