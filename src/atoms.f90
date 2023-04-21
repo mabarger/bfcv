@@ -647,7 +647,7 @@ contains
         ! If no match was found try to look for single letter names
         do i = 1, size(element_names)
             ! Check if the name matches to omit subspecifiers (e.g. O2 or N_an)
-            if (curr_atom%name(1:1) == element_names(i)(1:1)) then
+            if (curr_atom%name(1:1) // " " == element_names(i)(1:2)) then
                 curr_atom%name(:) = ""
                 curr_atom%name(1:2) = element_names(i)(1:2)
                 curr_atom%id = i
