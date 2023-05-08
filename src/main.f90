@@ -1,4 +1,4 @@
-! This program reads in a file describing a molecule and calculates the center of mass
+! Basic Fortran CIF Viewer
 program bfcv
     use gtk_application
     implicit none
